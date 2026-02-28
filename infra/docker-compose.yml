@@ -1,0 +1,212 @@
+# Infrastructure for dev and test environments.
+# Base services (postgres, minio, etc.) run without a profile (always available).
+# Dev-only services (backend) use profiles: [dev].
+# Test services (test-postgres, test-minio, etc.) use profiles: [test].
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    command: postgres -c max_connections=500
+    environment:
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: platform_dev
+      POSTGRES_DB: platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform -d platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb --ignore-existing myminio/app-storage;
+      echo 'Buckets created successfully';
+      exit 0;
+      "
+
+  elasticmq:
+    image: softwaremill/elasticmq-native:latest
+    ports:
+      - "9324:9324"
+      - "9325:9325"
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:9324/?Action=ListQueues || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8025/api/v2/messages || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # Backend service with hot-reloading via air (dev only)
+  backend:
+    profiles: [dev]
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ..:/app                    # Mount source for hot-reload
+      - /app/.air                  # Exclude air build dir
+      - go-mod-cache:/go/pkg/mod   # Cache Go modules
+    env_file:
+      - ../.env.dev
+      - path: ../.env.local.secrets
+        required: false
+    environment:
+      # Override localhost with Docker DNS names for container networking
+      POSTGRES_HOST: postgres
+      AWS_ENDPOINT_URL_S3: http://minio:9000
+      AWS_ENDPOINT_URL_SQS: http://elasticmq:9324
+      TASK_QUEUE_URL: http://elasticmq:9324/queue/task-queue
+      TASK_DLQ_URL: http://elasticmq:9324/queue/task-dlq
+      EMAIL_QUEUE_URL: http://elasticmq:9324/queue/email-queue
+      MAILHOG_HOST: mailhog
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      elasticmq:
+        condition: service_healthy
+      mailhog:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # =========================================================================
+  # Test infrastructure (profiles: [test])
+  # Dedicated services for integration tests with non-overlapping ports.
+  # =========================================================================
+
+  test-postgres:
+    profiles: [test]
+    image: postgres:18-alpine
+    command: postgres -c max_connections=500
+    environment:
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: platform_dev
+      POSTGRES_DB: platform_test
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform -d platform_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  test-minio:
+    profiles: [test]
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    volumes:
+      - test_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  test-minio-setup:
+    profiles: [test]
+    image: minio/mc:latest
+    depends_on:
+      test-minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://test-minio:9000 minioadmin minioadmin;
+      mc mb --ignore-existing myminio/app-storage;
+      exit 0;
+      "
+
+  test-elasticmq:
+    profiles: [test]
+    image: softwaremill/elasticmq-native:latest
+    ports:
+      - "9326:9324"
+      - "9327:9325"
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:9324/?Action=ListQueues || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  test-mailhog:
+    profiles: [test]
+    image: mailhog/mailhog:latest
+    ports:
+      - "1026:1025"
+      - "8026:8025"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8025/api/v2/messages || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  postgres_data:
+  minio_data:
+  go-mod-cache:
+  test_postgres_data:
+  test_minio_data:

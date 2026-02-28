@@ -1,0 +1,33 @@
+/* Theme variables and semantic CSS classes */
+
+:root {
+    --app-bg-base: #f9fafb;
+    --app-bg-surface: #ffffff;
+    --app-text-primary: #111827;
+    --app-text-secondary: #4b5563;
+    --app-text-muted: #9ca3af;
+    --app-border-default: #e5e7eb;
+    --app-border-focus: #3b82f6;
+}
+
+.dark {
+    --app-bg-base: #111827;
+    --app-bg-surface: #1f2937;
+    --app-text-primary: #f9fafb;
+    --app-text-secondary: #d1d5db;
+    --app-text-muted: #6b7280;
+    --app-border-default: #374151;
+    --app-border-focus: #60a5fa;
+}
+
+/* Utility classes */
+.app-card {
+    background-color: var(--app-bg-surface);
+    border: 1px solid var(--app-border-default);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.app-surface-muted {
+    background-color: var(--app-bg-base);
+}

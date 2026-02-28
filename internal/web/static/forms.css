@@ -1,0 +1,29 @@
+/* Form element styles */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="url"],
+input[type="tel"],
+textarea,
+select {
+    appearance: none;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--app-border-default, #e5e7eb);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    background-color: var(--app-bg-surface, #ffffff);
+    color: var(--app-text-primary, #111827);
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--app-border-focus, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}

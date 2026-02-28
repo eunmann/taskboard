@@ -1,0 +1,63 @@
+version: "2"
+
+linters:
+  default: all
+  disable:
+    - lll
+    - wsl
+    - varnamelen
+    - tagliatelle
+    - paralleltest
+    - exhaustruct
+    - canonicalheader
+    - depguard
+    - noinlineerr
+  settings:
+    cyclop:
+      max-complexity: 15
+    funlen:
+      lines: 80
+    gosec:
+      excludes:
+        - G404
+    exhaustive:
+      default-signifies-exhaustive: true
+    ireturn:
+      allow:
+        - anon
+        - error
+        - empty
+        - stdlib
+        - github.com/OWNER/PROJECT_NAME/internal
+        - github.com/jackc/pgx/v5
+  exclusions:
+    rules:
+      - path: "(cmd|tools|services)/"
+        linters:
+          - forbidigo
+          - gochecknoglobals
+      - path: "internal/platform/ids/ids\\.go"
+        linters:
+          - revive
+        text: "exported"
+      - path: "internal/platform/ids/ids\\.go"
+        linters:
+          - recvcheck
+      - path: "export_test\\.go"
+        linters:
+          - gochecknoglobals
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+    - gofumpt
+
+issues:
+  max-issues-per-linter: 5
+
+run:
+  timeout: 5m
+  tests: true
+  go: "1.25"
