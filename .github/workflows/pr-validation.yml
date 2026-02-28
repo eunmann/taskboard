@@ -26,71 +26,16 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: platform
-          POSTGRES_PASSWORD: platform_dev
-          POSTGRES_DB: platform_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U platform -d platform_test"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 30
-      elasticmq:
-        image: softwaremill/elasticmq-native:latest
-        ports:
-          - 9324:9324
-      mailhog:
-        image: mailhog/mailhog:latest
-        ports:
-          - 1025:1025    # SMTP
-          - 8025:8025    # HTTP API
-
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
           cache: true
-
-      - name: Start MinIO
-        run: |
-          docker run -d --name minio \
-            -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio:latest server /data
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:9000/minio/health/live; then
-              echo "MinIO is ready"
-              break
-            fi
-            echo "Waiting for MinIO... ($i/30)"
-            sleep 2
-          done
-
-      - name: Set up MinIO buckets
-        run: |
-          docker run --rm --network host --entrypoint sh minio/mc -c \
-            "mc alias set myminio http://localhost:9000 minioadmin minioadmin && \
-             mc mb --ignore-existing myminio/app-storage"
-
-      - name: Run migrations
-        run: |
-          go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
-            -path infra/migrations \
-            -database "postgres://platform:platform_dev@localhost:5432/platform_test?sslmode=disable" \
-            up
-
       - name: Run tests
-        run: make test-all ENV_TEST=.env.ci
-
+        run: make test
       - uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: artifacts/coverage/integration.out
+          path: artifacts/coverage/unit.out

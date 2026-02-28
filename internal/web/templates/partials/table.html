@@ -1,0 +1,97 @@
+{{define "table"}}
+<div id="task-table"
+     hx-get="/partials/table?_poll=1{{with queryParams .Query}}&amp;{{.}}{{end}}"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML">
+    {{range $col, $vals := .Query.Filters}}<input type="hidden" class="tb-param" name="{{$col}}" value="{{joinComma $vals}}">{{end}}
+    <input type="hidden" class="tb-param" name="sort" value="{{if .Query.Desc}}-{{end}}{{.Query.Sort}}">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {{if .Tasks}}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs uppercase text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                        <th class="px-4 py-3">
+                            <a hx-get="/partials/table?{{queryParamsWithSort .Query "title"}}"
+                               hx-target="#task-table" hx-swap="outerHTML"
+                               class="hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer">
+                                Title{{sortIndicator "title" .Query.Sort .Query.Desc}}
+                            </a>
+                        </th>
+                        {{range .SortedColumns}}
+                        <th class="px-4 py-3">
+                            <a hx-get="/partials/table?{{queryParamsWithSort $.Query .Name}}"
+                               hx-target="#task-table" hx-swap="outerHTML"
+                               class="hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer">
+                                {{.Name}}{{sortIndicator .Name $.Query.Sort $.Query.Desc}}
+                            </a>
+                        </th>
+                        {{end}}
+                        <th class="px-4 py-3">Tags</th>
+                        <th class="px-4 py-3">
+                            <a hx-get="/partials/table?{{queryParamsWithSort .Query "updated"}}"
+                               hx-target="#task-table" hx-swap="outerHTML"
+                               class="hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer">
+                                Updated{{sortIndicator "updated" .Query.Sort .Query.Desc}}
+                            </a>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    {{range .Tasks}}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                        hx-get="/task/{{.ID}}"
+                        hx-push-url="true"
+                        hx-target="main"
+                        hx-swap="innerHTML">
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <div>
+                                    <div class="font-medium text-gray-900 dark:text-white">{{if .Title}}{{.Title}}{{else}}{{.ID}}{{end}}</div>
+                                    <div class="text-xs text-gray-400 font-mono">{{.ID}}</div>
+                                </div>
+                                {{if .Warnings}}
+                                {{template "warning_badge" .Warnings}}
+                                {{end}}
+                            </div>
+                        </td>
+                        {{$task := .}}
+                        {{range $.SortedColumns}}
+                        <td class="px-4 py-3">
+                            {{$val := index $task.Fields .Name}}
+                            {{if $val}}
+                            {{template "badge" dict "Value" $val "Color" (.Column.ColorFor $val)}}
+                            {{end}}
+                        </td>
+                        {{end}}
+                        <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1">
+                                {{range .Tags}}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{.}}</span>
+                                {{end}}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {{if not .Updated.IsZero}}
+                            <span title="{{.Updated.Format "2006-01-02T15:04:05Z07:00"}}">{{relativeTime .Updated}}</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <div class="text-center py-12 text-gray-500 dark:text-gray-400">
+            {{if .Query.Search}}
+            <p class="text-lg">No tasks match the current filters.</p>
+            <p class="text-sm mt-1"><a href="/" class="text-primary-600 dark:text-primary-400 hover:underline">Clear all filters</a></p>
+            {{else}}
+            <p class="text-lg">No tasks found.</p>
+            <p class="text-sm mt-1">Create task files in the .tasks/ directory to get started.</p>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+</div>
+{{end}}

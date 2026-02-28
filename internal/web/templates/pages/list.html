@@ -1,0 +1,65 @@
+{{define "content"}}
+<div class="space-y-4">
+    <meta name="tb-version" content="{{.ETag}}">
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Tasks</h1>
+        <input type="search" name="q" value="{{.Query.Search}}"
+               placeholder="Search tasks..."
+               class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400"
+               hx-get="/partials/table"
+               hx-trigger="input changed delay:300ms, search"
+               hx-target="#task-table"
+               hx-swap="outerHTML"
+               hx-include="#task-table input.tb-param">
+    </div>
+
+    {{if .SortedColumns}}
+    <div x-data="{ filters: { {{range $i, $col := .SortedColumns}}{{if $i}}, {{end}}'{{$col.Name}}': [{{range $j, $v := (index $.Query.Filters $col.Name)}}{{if $j}},{{end}}'{{$v}}'{{end}}]{{end}} } }"
+         class="flex items-center gap-2 flex-wrap">
+        {{range .SortedColumns}}
+        {{template "filter" dict "Name" .Name "Column" .Column}}
+        {{end}}
+        <div class="ml-auto flex items-center gap-2">
+            <template x-if="Object.values(filters).some(a => a.length > 0)">
+                <button @click="Object.keys(filters).forEach(k => filters[k] = []); applyFilters(filters)"
+                        class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                    Clear
+                </button>
+            </template>
+            <button @click="applyFilters(filters)"
+                    class="tb-apply px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                </svg>
+                Filter
+            </button>
+        </div>
+    </div>
+    {{end}}
+
+    {{template "table" .}}
+</div>
+<script>
+function applyFilters(filters) {
+    var params = new URLSearchParams();
+    var searchInput = document.querySelector('input[name="q"]');
+    if (searchInput && searchInput.value.trim()) {
+        params.set('q', searchInput.value.trim());
+    }
+    Object.keys(filters).forEach(function(key) {
+        if (filters[key].length > 0) {
+            params.set(key, filters[key].join(','));
+        }
+    });
+    var sortInput = document.querySelector('#task-table input[name="sort"]');
+    if (sortInput && sortInput.value && sortInput.value !== '-updated') {
+        params.set('sort', sortInput.value);
+    }
+    var url = '/partials/table';
+    var qs = params.toString();
+    if (qs) { url += '?' + qs; }
+    htmx.ajax('GET', url, {target:'#task-table', swap:'outerHTML'});
+}
+</script>
+{{end}}

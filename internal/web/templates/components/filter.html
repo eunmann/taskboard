@@ -1,0 +1,25 @@
+{{define "filter"}}
+<div x-data="{ open: false }" class="relative">
+    <button @click="open = !open" @click.away="open = false"
+            class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-1">
+        {{.Name}}
+        <template x-if="filters['{{.Name}}'].length > 0">
+            <span class="ml-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs px-1.5 rounded-full" x-text="filters['{{.Name}}'].length"></span>
+        </template>
+        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+    </button>
+    <div x-show="open" x-cloak
+         class="absolute left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 py-1">
+        {{range .Column.Values}}
+        <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+            <input type="checkbox" value="{{.Name}}"
+                   x-model="filters['{{$.Name}}']"
+                   class="rounded border-gray-300 dark:border-gray-600 text-primary-600 mr-2">
+            <span class="text-sm text-gray-700 dark:text-gray-200">{{.Name}}</span>
+        </label>
+        {{end}}
+    </div>
+</div>
+{{end}}

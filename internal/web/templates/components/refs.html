@@ -1,0 +1,23 @@
+{{define "refs"}}
+{{if .Task.Refs}}
+<div>
+    <dt class="text-xs text-gray-500 dark:text-gray-400">References</dt>
+    <dd class="space-y-1 mt-0.5">
+        {{range .Task.Refs}}
+        <div class="text-sm">
+            <span class="text-gray-500 dark:text-gray-400">{{.Type}}:</span>
+            {{$refTask := index $.AllTasks .ID}}
+            {{if $refTask}}
+            <a href="/task/{{.ID}}" hx-get="/task/{{.ID}}" hx-push-url="true" hx-target="main"
+               class="text-primary-600 dark:text-primary-400 hover:underline">
+                {{$refTask.Title}} <span class="font-mono text-xs text-gray-400">({{.ID}})</span>
+            </a>
+            {{else}}
+            <span class="font-mono text-gray-400" title="Reference to unknown task '{{.ID}}'">{{.ID}} <span class="text-amber-500 text-xs">&#9888;</span></span>
+            {{end}}
+        </div>
+        {{end}}
+    </dd>
+</div>
+{{end}}
+{{end}}

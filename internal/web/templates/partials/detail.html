@@ -1,0 +1,77 @@
+{{define "detail_content"}}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-4">
+        {{if .Task.Warnings}}
+        <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-400 p-4">
+            <h3 class="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">Warnings</h3>
+            <ul class="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                {{range .Task.Warnings}}
+                {{template "warning" .}}
+                {{end}}
+            </ul>
+        </div>
+        {{end}}
+
+        {{if .Task.Description}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Description</h2>
+            <div class="prose max-w-none">
+                {{markdown .Task.Description}}
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Details</h2>
+            <dl class="space-y-3">
+                <div>
+                    <dt class="text-xs text-gray-500 dark:text-gray-400">ID</dt>
+                    <dd class="text-sm font-mono text-gray-900 dark:text-gray-100">{{.Task.ID}}</dd>
+                </div>
+                {{range .SortedColumns}}
+                <div>
+                    <dt class="text-xs text-gray-500 dark:text-gray-400">{{.Name}}</dt>
+                    <dd class="mt-0.5">
+                        {{$val := index $.Task.Fields .Name}}
+                        {{if $val}}
+                        {{template "badge" dict "Value" $val "Color" (.Column.ColorFor $val)}}
+                        {{else}}
+                        <span class="text-sm text-gray-400">-</span>
+                        {{end}}
+                    </dd>
+                </div>
+                {{end}}
+                {{if .Task.Tags}}
+                <div>
+                    <dt class="text-xs text-gray-500 dark:text-gray-400">Tags</dt>
+                    <dd class="flex flex-wrap gap-1 mt-0.5">
+                        {{range .Task.Tags}}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{.}}</span>
+                        {{end}}
+                    </dd>
+                </div>
+                {{end}}
+                {{template "refs" .}}
+                <div>
+                    <dt class="text-xs text-gray-500 dark:text-gray-400">File</dt>
+                    <dd class="text-sm font-mono text-gray-600 dark:text-gray-300">{{.Task.FileName}}</dd>
+                </div>
+                {{if not .Task.Created.IsZero}}
+                <div>
+                    <dt class="text-xs text-gray-500 dark:text-gray-400">Created</dt>
+                    <dd class="text-sm text-gray-600 dark:text-gray-300" title="{{.Task.Created.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTime .Task.Created}}</dd>
+                </div>
+                {{end}}
+                {{if not .Task.Updated.IsZero}}
+                <div>
+                    <dt class="text-xs text-gray-500 dark:text-gray-400">Updated</dt>
+                    <dd class="text-sm text-gray-600 dark:text-gray-300" title="{{.Task.Updated.Format "2006-01-02T15:04:05Z07:00"}}">{{relativeTime .Task.Updated}}</dd>
+                </div>
+                {{end}}
+            </dl>
+        </div>
+    </div>
+</div>
+{{end}}

@@ -1,0 +1,18 @@
+{{define "warning"}}
+<li>
+    <span class="font-medium">{{.Field}}:</span> {{.Message}}
+</li>
+{{end}}
+
+{{define "warning_badge"}}
+<span x-data="{ show: false }" @mouseenter="show = true" @mouseleave="show = false" class="relative">
+    <span class="text-amber-500 cursor-help text-sm">&#9888;</span>
+    <div x-show="show" x-cloak x-transition class="absolute z-10 bg-gray-900 text-white text-xs rounded p-2 w-64 left-0 top-6 shadow-lg">
+        <ul class="space-y-0.5">
+            {{range .}}
+            <li>{{.Field}}: {{.Message}}</li>
+            {{end}}
+        </ul>
+    </div>
+</span>
+{{end}}
