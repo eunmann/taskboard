@@ -1,0 +1,22 @@
+# priority: urgent is intentionally invalid to demonstrate warnings in the UI
+id: Sd2k7x
+title: "Set up CI/CD pipeline"
+status: done
+priority: urgent
+type: task
+tags: [infrastructure, devops]
+created: 2025-01-01T10:00:00Z
+updated: 2025-01-08T14:30:00Z
+description: |
+  Configure GitHub Actions for the project.
+
+  ## Requirements
+
+  - Run tests on every pull request
+  - Lint checks must pass before merge
+  - Build binary and verify it starts
+
+  ## Acceptance criteria
+
+  - PR validation workflow runs on push
+  - All checks green on main branch

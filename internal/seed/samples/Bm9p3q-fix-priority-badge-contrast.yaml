@@ -1,0 +1,20 @@
+id: Bm9p3q
+title: "Fix low contrast on priority badges"
+status: open
+priority: medium
+type: bug
+tags: [ui, accessibility]
+created: 2025-01-11T09:15:00Z
+updated: 2025-01-11T09:15:00Z
+description: |
+  The priority badges for "low" and "medium" are hard to read.
+
+  ## Steps to reproduce
+
+  1. Open the task list
+  2. Look at tasks with low or medium priority
+  3. Badge text is hard to read
+
+  ## Expected
+
+  Badges should have sufficient contrast ratio (WCAG AA).

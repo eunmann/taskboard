@@ -1,0 +1,17 @@
+id: Nf3a5w
+title: "Improve overall UX"
+status: in-progress
+priority: critical
+type: epic
+tags: [ui, ux]
+created: 2025-01-02T09:00:00Z
+updated: 2025-01-13T11:00:00Z
+description: |
+  Epic tracking all UX improvements for the initial release.
+
+  ## Goals
+
+  - Task list is easy to scan and filter
+  - Task detail page shows all relevant information
+  - Navigation is intuitive
+  - Works well on mobile viewports

@@ -1,0 +1,19 @@
+id: Qe7j2y
+title: "Add dark mode support"
+status: open
+priority: low
+type: feature
+tags: [ui, design]
+created: 2025-01-12T14:00:00Z
+updated: 2025-01-12T14:00:00Z
+refs:
+  - type: relates-to
+    id: Bm9p3q
+description: |
+  Support a dark color scheme via prefers-color-scheme.
+
+  ## Approach
+
+  - Use CSS custom properties for all colors
+  - Detect system preference with media query
+  - Optional: add manual toggle in the UI

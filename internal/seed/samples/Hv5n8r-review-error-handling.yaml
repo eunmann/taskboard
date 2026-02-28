@@ -1,0 +1,20 @@
+id: Hv5n8r
+title: "Review error handling patterns"
+status: review
+priority: medium
+type: task
+tags: [backend, code-quality]
+created: 2025-01-04T11:00:00Z
+updated: 2025-01-12T16:45:00Z
+refs:
+  - type: blocked-by
+    id: Sd2k7x
+description: |
+  Audit error handling for consistent patterns.
+
+  ## Checklist
+
+  - [ ] All errors wrapped with context
+  - [ ] No silently swallowed errors
+  - [ ] HTTP handlers return appropriate status codes
+  - [ ] Startup errors cause immediate exit

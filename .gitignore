@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-/bin
+/bin/
 
 # Test binary, built with `go test -c`
 *.test
@@ -18,23 +18,21 @@ profile.cov
 # Go workspace sum file
 go.work.sum
 
-# env file
-.env
-.env.local.secrets
-!.env.dev
-!.env.test
-!.env.ci
-
 # Build and coverage artifacts
 /artifacts/
-
-# Compiled dev binary
-/dev
 
 # Runtime logs
 /logs/
 /tmp/
-.air/
 
 # Code review working files
 /review/
+
+# Air hot-reload temp directory
+/.air/
+
+# Compiled seed binary
+/seed
+
+# Task files created during testing
+/.tasks/
