@@ -67,7 +67,8 @@
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-1">
                                 {{range .Tags}}
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{.}}</span>
+                                <a href="/?q={{.}}" onclick="event.stopPropagation(); htmx.ajax('GET','/partials/table?q={{.}}',{target:'#task-table',swap:'outerHTML'}); var s=document.querySelector('input[name=q]'); if(s){s.value='{{.}}';} return false;"
+                                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer">{{.}}</a>
                                 {{end}}
                             </div>
                         </td>

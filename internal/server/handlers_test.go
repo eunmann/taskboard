@@ -895,8 +895,10 @@ func TestDetailPageColumnBadges(t *testing.T) {
 
 	doc := testhelpers.ParseHTML(t, w)
 
-	// Task has status=open, priority=high, and tag=backend — all as badges.
-	testhelpers.AssertElementCount(t, doc, "dl span.inline-flex", 3)
+	// Task has status=open, priority=high — column badges are spans.
+	testhelpers.AssertElementCount(t, doc, "dl span.inline-flex", 2)
+	// Tag=backend is a clickable link.
+	testhelpers.AssertElementCount(t, doc, "dl a.inline-flex", 1)
 }
 
 func containsString(s, substr string) bool {
