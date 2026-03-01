@@ -608,7 +608,7 @@ func TestDetailBackLink(t *testing.T) {
 	}
 }
 
-func TestFilterBarApplyButton(t *testing.T) {
+func TestFilterCheckboxAppliesImmediately(t *testing.T) {
 	idx := setupTestIndex(t)
 
 	renderer, err := NewRenderer()
@@ -625,12 +625,12 @@ func TestFilterBarApplyButton(t *testing.T) {
 
 	body := w.Body.String()
 
-	if !containsString(body, "tb-apply") {
-		t.Error("response missing unified Apply/Filter button (class tb-apply)")
+	if !containsString(body, "applyFilters(filters)") {
+		t.Error("response missing applyFilters call on checkbox change")
 	}
 
-	if !containsString(body, "applyFilters(filters)") {
-		t.Error("response missing applyFilters call on Filter button")
+	if containsString(body, "tb-apply") {
+		t.Error("response should not contain separate Filter button (class tb-apply)")
 	}
 }
 
