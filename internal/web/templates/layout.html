@@ -54,6 +54,7 @@
             <div class="flex justify-between items-center h-14">
                 <div class="flex items-center space-x-6">
                     <a href="/" class="text-lg font-bold text-primary-600 dark:text-primary-400">{{.Project}}</a>
+                    {{if .TaskCount}}<span class="ml-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full">{{.TaskCount}}</span>{{end}}
                 </div>
                 <div class="flex items-center space-x-3">
                     <button @click="toggleTheme()"

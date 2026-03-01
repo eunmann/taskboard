@@ -27,7 +27,7 @@ type ListData struct {
 	Query         Query
 	ETag          string
 	AllTags       []string
-	TotalCount    int
+	TaskCount     int
 	StatusCounts  []StatusCount
 	WarningCount  int
 }
@@ -40,6 +40,7 @@ type DetailData struct {
 	Columns       map[string]config.Column
 	SortedColumns []ColumnInfo
 	AllTasks      map[string]*task.Task
+	TaskCount     int
 }
 
 func handleList(idx *index.Index, renderer *Renderer) http.HandlerFunc {
@@ -59,7 +60,7 @@ func handleList(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 			Query:         q,
 			ETag:          etag,
 			AllTags:       collectTags(allTasks),
-			TotalCount:    len(allTasks),
+			TaskCount:     len(allTasks),
 			StatusCounts:  collectStatusCounts(allTasks, cfg.Columns),
 			WarningCount:  countWarnings(allTasks),
 		}
@@ -105,6 +106,7 @@ func handleDetail(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 			Columns:       cfg.Columns,
 			SortedColumns: SortedColumns(cfg.Columns),
 			AllTasks:      allTasks,
+			TaskCount:     len(allTasks),
 		}
 
 		if isHTMX(r) {
