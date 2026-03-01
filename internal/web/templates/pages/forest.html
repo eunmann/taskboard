@@ -1,0 +1,96 @@
+{{define "content"}}
+<div class="space-y-4">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Forest</h1>
+            <span class="text-sm text-gray-500 dark:text-gray-400">{{.TaskCount}} tasks</span>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-6 text-xs text-gray-500 dark:text-gray-400">
+        <div class="flex items-center gap-2">
+            <svg class="w-6 h-3"><line x1="0" y1="6" x2="24" y2="6" stroke="currentColor" stroke-width="1.5"/><polygon points="20,3 24,6 20,9" fill="currentColor"/></svg>
+            <span>parent</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <svg class="w-6 h-3"><line x1="0" y1="6" x2="24" y2="6" stroke="currentColor" stroke-width="3.5"/><polygon points="20,3 24,6 20,9" fill="currentColor"/></svg>
+            <span>blocked by</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <svg class="w-6 h-3"><line x1="0" y1="6" x2="24" y2="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,3"/><polygon points="20,3 24,6 20,9" fill="currentColor"/></svg>
+            <span>relates to</span>
+        </div>
+        {{range .StatusLegend}}
+        <div class="flex items-center gap-1.5">
+            <span class="inline-block w-3 h-3 rounded-full" style="background:{{.Color}}"></span>
+            <span>{{.Name}}</span>
+        </div>
+        {{end}}
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 overflow-x-auto">
+        <pre class="mermaid" data-def="{{.MermaidDef}}">{{.MermaidDef}}</pre>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+    (function() {
+        function isDark() {
+            return document.documentElement.classList.contains('dark');
+        }
+
+        function themeVars() {
+            if (isDark()) {
+                return {
+                    lineColor: '#9ca3af',
+                    primaryColor: '#1f2937',
+                    primaryBorderColor: '#4b5563',
+                    primaryTextColor: '#f3f4f6',
+                };
+            }
+            return {
+                lineColor: '#6b7280',
+                primaryColor: '#ffffff',
+                primaryBorderColor: '#d1d5db',
+                primaryTextColor: '#111827',
+            };
+        }
+
+        function renderMermaid() {
+            var el = document.querySelector('pre.mermaid');
+            if (!el) return;
+            var def = el.getAttribute('data-def');
+            if (!def) return;
+
+            el.removeAttribute('data-processed');
+            el.innerHTML = def;
+
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'base',
+                themeVariables: themeVars(),
+                securityLevel: 'loose',
+                flowchart: {
+                    useMaxWidth: true,
+                    htmlLabels: true,
+                    curve: 'basis',
+                },
+            });
+            mermaid.run();
+        }
+
+        renderMermaid();
+
+        var observer = new MutationObserver(function(mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                if (mutations[i].attributeName === 'class') {
+                    renderMermaid();
+                    return;
+                }
+            }
+        });
+        observer.observe(document.documentElement, { attributes: true });
+    })();
+</script>
+{{end}}

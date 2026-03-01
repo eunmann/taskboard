@@ -42,6 +42,7 @@ func New(idx *index.Index, addr string) (*Server, error) {
 
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticSub))))
 	mux.HandleFunc("GET /{$}", handleList(idx, renderer))
+	mux.HandleFunc("GET /forest", handleForest(idx, renderer))
 	mux.HandleFunc("GET /task/{id}", handleDetail(idx, renderer))
 	mux.HandleFunc("GET /partials/table", handleTablePartial(idx, renderer))
 
