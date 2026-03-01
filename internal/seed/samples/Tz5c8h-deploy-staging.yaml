@@ -1,0 +1,27 @@
+id: Tz5c8h
+title: "Deploy staging environment"
+status: open
+priority: medium
+type: chore
+tags: [infrastructure, devops]
+created: 2025-01-17T08:00:00Z
+updated: 2025-01-17T08:00:00Z
+refs:
+  - type: blocked-by
+    id: Jk6t9d
+  - type: relates-to
+    id: Sd2k7x
+description: |
+  Set up a staging environment for pre-release validation.
+
+  ## Requirements
+
+  - Mirror production configuration
+  - Auto-deploy on merge to main
+  - Accessible to the team for manual testing
+
+  ## Dependencies
+
+  Cannot deploy staging until integration tests are in place.
+  Related to the CI/CD pipeline work which provides the
+  deployment infrastructure.

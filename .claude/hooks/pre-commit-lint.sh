@@ -20,6 +20,27 @@ if [[ -z "$STAGED_FILES" ]]; then
     exit 0
 fi
 
+# Filter out files belonging to sub-modules (directories with their own go.mod)
+FILTERED_FILES=""
+while IFS= read -r file; do
+    DIR=$(dirname "$file")
+    IN_SUBMODULE=false
+    while [[ "$DIR" != "." && "$DIR" != "/" ]]; do
+        if [[ -f "$DIR/go.mod" && "$DIR" != "." ]]; then
+            IN_SUBMODULE=true
+            break
+        fi
+        DIR=$(dirname "$DIR")
+    done
+    if [[ "$IN_SUBMODULE" == false ]]; then
+        FILTERED_FILES+="$file"$'\n'
+    fi
+done <<< "$STAGED_FILES"
+STAGED_FILES=$(echo "$FILTERED_FILES" | sed '/^$/d')
+if [[ -z "$STAGED_FILES" ]]; then
+    exit 0
+fi
+
 # Find unique package directories
 PACKAGES=$(echo "$STAGED_FILES" | xargs -I{} dirname {} | sort -u | sed 's|$|/...|')
 
@@ -33,7 +54,7 @@ done <<< "$STAGED_FILES"
 
 # Run linter with auto-fix
 LINT_EXIT=0
-go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0 run --fix $PACKAGES 2>&1 || LINT_EXIT=$?
+go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.10.1 run --fix $PACKAGES 2>&1 || LINT_EXIT=$?
 
 # Re-stage any auto-fixed files
 RESTAGED=0

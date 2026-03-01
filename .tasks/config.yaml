@@ -1,0 +1,41 @@
+project: Taskboard
+columns:
+    priority:
+        order: 2
+        values:
+            - name: critical
+              color: '#dc2626'
+            - name: high
+              color: '#f97316'
+            - name: medium
+              color: '#eab308'
+            - name: low
+              color: '#6b7280'
+    status:
+        order: 1
+        values:
+            - name: open
+              color: '#22c55e'
+            - name: in-progress
+              color: '#3b82f6'
+            - name: review
+              color: '#f59e0b'
+            - name: done
+              color: '#6b7280'
+            - name: cancelled
+              color: '#ef4444'
+    type:
+        order: 3
+        values:
+            - name: feature
+              color: '#8b5cf6'
+            - name: fix
+              color: '#ef4444'
+            - name: chore
+              color: '#64748b'
+            - name: spike
+              color: '#06b6d4'
+            - name: docs
+              color: '#22d3ee'
+            - name: refactor
+              color: '#f59e0b'

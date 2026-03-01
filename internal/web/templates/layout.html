@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="/static/prose.css">
     <style>
         [x-cloak] { display: none !important; }
+        pre.mermaid:not([data-processed]) { visibility: hidden; }
     </style>
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
@@ -56,8 +57,8 @@
                     <a href="/" class="text-lg font-bold text-primary-600 dark:text-primary-400">{{.Project}}</a>
                     {{if .TaskCount}}<span class="ml-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full">{{.TaskCount}}</span>{{end}}
                     <nav class="hidden sm:flex items-center gap-4 ml-4 text-sm font-medium">
-                        <a href="/" class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">List</a>
-                        <a href="/forest" class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">Forest</a>
+                        <a href="/" hx-get="/" hx-push-url="true" hx-target="main" hx-swap="innerHTML" class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">List</a>
+                        <a href="/graph" hx-get="/graph" hx-push-url="true" hx-target="main" hx-swap="innerHTML" class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">Graph</a>
                     </nav>
                 </div>
                 <div class="flex items-center space-x-3">
@@ -134,6 +135,72 @@
             rows[idx].classList.add('tb-selected', 'bg-primary-50', 'dark:bg-primary-900/20');
             rows[idx].scrollIntoView({block: 'nearest'});
         });
+    </script>
+    <script>
+        (function() {
+            var mermaidLoading = false;
+
+            function isDark() {
+                return document.documentElement.classList.contains('dark');
+            }
+
+            function themeVars() {
+                if (isDark()) {
+                    return {
+                        lineColor: '#9ca3af',
+                        primaryColor: '#1f2937',
+                        primaryBorderColor: '#4b5563',
+                        primaryTextColor: '#f3f4f6',
+                    };
+                }
+                return {
+                    lineColor: '#6b7280',
+                    primaryColor: '#ffffff',
+                    primaryBorderColor: '#d1d5db',
+                    primaryTextColor: '#111827',
+                };
+            }
+
+            function renderMermaid() {
+                var el = document.querySelector('pre.mermaid');
+                if (!el) return;
+                var def = el.getAttribute('data-def');
+                if (!def) return;
+                el.removeAttribute('data-processed');
+                el.innerHTML = def;
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: 'base',
+                    themeVariables: themeVars(),
+                    securityLevel: 'loose',
+                    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+                });
+                mermaid.run();
+            }
+
+            function ensureMermaid() {
+                if (!document.querySelector('pre.mermaid')) return;
+                if (typeof mermaid !== 'undefined') { renderMermaid(); return; }
+                if (mermaidLoading) return;
+                mermaidLoading = true;
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js';
+                s.onload = function() { mermaidLoading = false; renderMermaid(); };
+                document.head.appendChild(s);
+            }
+
+            ensureMermaid();
+            document.body.addEventListener('htmx:afterSettle', ensureMermaid);
+
+            new MutationObserver(function(mutations) {
+                for (var i = 0; i < mutations.length; i++) {
+                    if (mutations[i].attributeName === 'class') {
+                        ensureMermaid();
+                        return;
+                    }
+                }
+            }).observe(document.documentElement, { attributes: true });
+        })();
     </script>
 </body>
 </html>

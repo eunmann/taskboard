@@ -20,4 +20,20 @@
     </dd>
 </div>
 {{end}}
+{{if .ReverseRefs}}
+<div>
+    <dt class="text-xs text-gray-500 dark:text-gray-400">Referenced by</dt>
+    <dd class="space-y-1 mt-0.5">
+        {{range .ReverseRefs}}
+        <div class="text-sm">
+            <span class="text-gray-500 dark:text-gray-400">{{.Label}}:</span>
+            <a href="/task/{{.Source.ID}}" hx-get="/task/{{.Source.ID}}" hx-push-url="true" hx-target="main"
+               class="text-primary-600 dark:text-primary-400 hover:underline">
+                {{.Source.Title}} <span class="font-mono text-xs text-gray-400">({{.Source.ID}})</span>
+            </a>
+        </div>
+        {{end}}
+    </dd>
+</div>
+{{end}}
 {{end}}

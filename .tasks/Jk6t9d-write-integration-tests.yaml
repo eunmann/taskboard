@@ -1,0 +1,27 @@
+id: Jk6t9d
+title: "Write integration test suite"
+status: open
+priority: high
+type: chore
+tags: [backend, testing]
+created: 2025-01-15T09:00:00Z
+updated: 2025-01-15T09:00:00Z
+refs:
+  - type: blocked-by
+    id: Sd2k7x
+  - type: blocked-by
+    id: Hv5n8r
+description: |
+  Create end-to-end integration tests for the HTTP server.
+
+  ## Scope
+
+  - Test full request/response cycle for each handler
+  - Verify HTMX partial rendering
+  - Test search and filter query parameters
+  - Validate ETag caching behavior
+
+  ## Prerequisites
+
+  Blocked by CI pipeline setup and error handling review — both
+  must be complete before integration tests can be meaningful.

@@ -1,0 +1,46 @@
+<!-- taskboard:begin -->
+
+## Taskboard
+
+Tasks are YAML files in `.taskboard/`. Use these commands to plan and execute work:
+
+- `/plan-work` — Decompose an objective into 3-8 taskboard tasks with dependencies.
+- `/next-task` — Pick the next unblocked task, implement it, mark it done.
+- `/task-status` — Show overview: status counts, available/blocked tasks, next actions.
+
+### Task YAML Schema
+
+```yaml
+id: Xr8m2v
+title: "Short imperative description"
+status: open
+priority: medium
+type: feature
+tags: [area]
+created: 2025-01-15T10:00:00Z
+updated: 2025-01-15T10:00:00Z
+refs:
+  - type: blocked-by
+    id: Hv5n8r
+description: |
+  What needs to be done and acceptance criteria.
+```
+
+### Status Values
+
+`open` | `in-progress` | `review` | `done` | `cancelled`
+
+### Ref Types
+
+- `blocked-by` — this task cannot start until the referenced task is done.
+- `parent` — groups subtasks under a larger task.
+- `relates-to` — informational cross-reference.
+
+### Workflow
+
+1. `/plan-work` — break the objective into tasks.
+2. `/next-task` — pick and complete one task at a time.
+3. `/task-status` — check progress, find blockers.
+4. Repeat until done.
+
+<!-- taskboard:end -->

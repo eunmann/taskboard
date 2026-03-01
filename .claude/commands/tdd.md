@@ -35,5 +35,6 @@ description: Red-Green-Refactor test-driven development cycle
 2. Write minimal code  → make test (PASS)
 3. Refactor            → make test (PASS)
 4. Commit              → git commit
-5. Repeat
+5. Mark task completed → pick up next task
+6. Repeat
 ```

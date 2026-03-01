@@ -12,13 +12,13 @@ import (
 	"github.com/eunmann/taskboard/internal/web/testhelpers"
 )
 
-func setupForestTestIndex(t *testing.T) *index.Index {
+func setupGraphTestIndex(t *testing.T) *index.Index {
 	t.Helper()
 
 	dir := t.TempDir()
 
 	writeTestFile(t, dir, "config.yaml", `
-project: Forest Test
+project: Graph Test
 columns:
   status:
     order: 1
@@ -30,21 +30,22 @@ columns:
   type:
     order: 2
     values:
-      - name: task
-      - name: epic
-        color: '#06b6d4'
+      - name: chore
+        color: '#64748b'
+      - name: feature
+        color: '#8b5cf6'
 `)
 
 	writeTestFile(t, dir, "parent1.yaml", `
-title: Parent Epic
+title: Parent Feature
 status: open
-type: epic
+type: feature
 `)
 
 	writeTestFile(t, dir, "child1.yaml", `
 title: Child Task
 status: open
-type: task
+type: chore
 refs:
   - type: parent
     id: parent1
@@ -53,7 +54,7 @@ refs:
 	writeTestFile(t, dir, "blocked1.yaml", `
 title: Blocked Task
 status: open
-type: task
+type: chore
 refs:
   - type: blocked-by
     id: parent1
@@ -62,7 +63,7 @@ refs:
 	writeTestFile(t, dir, "related1.yaml", `
 title: Related Task
 status: done
-type: task
+type: chore
 refs:
   - type: relates-to
     id: child1
@@ -76,17 +77,17 @@ refs:
 	return idx
 }
 
-func TestHandleForest(t *testing.T) {
-	idx := setupForestTestIndex(t)
+func TestHandleGraph(t *testing.T) {
+	idx := setupGraphTestIndex(t)
 
 	renderer, err := NewRenderer()
 	if err != nil {
 		t.Fatalf("NewRenderer() error = %v", err)
 	}
 
-	handler := handleForest(idx, renderer)
+	handler := handleGraph(idx, renderer)
 
-	req := httptest.NewRequest(http.MethodGet, "/forest", nil)
+	req := httptest.NewRequest(http.MethodGet, "/graph", nil)
 	w := httptest.NewRecorder()
 
 	handler(w, req)
@@ -95,8 +96,8 @@ func TestHandleForest(t *testing.T) {
 
 	body := w.Body.String()
 
-	if !strings.Contains(body, "Parent Epic") {
-		t.Error("response missing 'Parent Epic'")
+	if !strings.Contains(body, "Parent Feature") {
+		t.Error("response missing 'Parent Feature'")
 	}
 
 	if !strings.Contains(body, "mermaid") {
@@ -104,17 +105,17 @@ func TestHandleForest(t *testing.T) {
 	}
 }
 
-func TestHandleForestHTMX(t *testing.T) {
-	idx := setupForestTestIndex(t)
+func TestHandleGraphHTMX(t *testing.T) {
+	idx := setupGraphTestIndex(t)
 
 	renderer, err := NewRenderer()
 	if err != nil {
 		t.Fatalf("NewRenderer() error = %v", err)
 	}
 
-	handler := handleForest(idx, renderer)
+	handler := handleGraph(idx, renderer)
 
-	req := httptest.NewRequest(http.MethodGet, "/forest", nil)
+	req := httptest.NewRequest(http.MethodGet, "/graph", nil)
 	req.Header.Set("HX-Request", "true")
 
 	w := httptest.NewRecorder()
@@ -125,8 +126,8 @@ func TestHandleForestHTMX(t *testing.T) {
 
 	body := w.Body.String()
 
-	if !strings.Contains(body, "Parent Epic") {
-		t.Error("HTMX response missing 'Parent Epic'")
+	if !strings.Contains(body, "Parent Feature") {
+		t.Error("HTMX response missing 'Parent Feature'")
 	}
 
 	if strings.Contains(body, "<html") {
@@ -134,17 +135,17 @@ func TestHandleForestHTMX(t *testing.T) {
 	}
 }
 
-func TestForestPageHTMLStructure(t *testing.T) {
-	idx := setupForestTestIndex(t)
+func TestGraphPageHTMLStructure(t *testing.T) {
+	idx := setupGraphTestIndex(t)
 
 	renderer, err := NewRenderer()
 	if err != nil {
 		t.Fatalf("NewRenderer() error = %v", err)
 	}
 
-	handler := handleForest(idx, renderer)
+	handler := handleGraph(idx, renderer)
 
-	req := httptest.NewRequest(http.MethodGet, "/forest", nil)
+	req := httptest.NewRequest(http.MethodGet, "/graph", nil)
 	w := httptest.NewRecorder()
 
 	handler(w, req)
@@ -153,11 +154,11 @@ func TestForestPageHTMLStructure(t *testing.T) {
 
 	doc := testhelpers.ParseHTML(t, w)
 
-	testhelpers.AssertTitle(t, doc, "Forest - Taskboard")
+	testhelpers.AssertTitle(t, doc, "Graph - Taskboard")
 	testhelpers.AssertElementExists(t, doc, "pre.mermaid")
 }
 
-func TestForestPageNavLinks(t *testing.T) {
+func TestGraphPageNavLinks(t *testing.T) {
 	idx := setupTestIndex(t)
 
 	renderer, err := NewRenderer()
@@ -165,9 +166,9 @@ func TestForestPageNavLinks(t *testing.T) {
 		t.Fatalf("NewRenderer() error = %v", err)
 	}
 
-	handler := handleForest(idx, renderer)
+	handler := handleGraph(idx, renderer)
 
-	req := httptest.NewRequest(http.MethodGet, "/forest", nil)
+	req := httptest.NewRequest(http.MethodGet, "/graph", nil)
 	w := httptest.NewRecorder()
 
 	handler(w, req)
@@ -175,23 +176,23 @@ func TestForestPageNavLinks(t *testing.T) {
 	doc := testhelpers.ParseHTML(t, w)
 
 	testhelpers.AssertElementExists(t, doc, `a[href="/"]`)
-	testhelpers.AssertElementExists(t, doc, `a[href="/forest"]`)
+	testhelpers.AssertElementExists(t, doc, `a[href="/graph"]`)
 }
 
 func TestBuildMermaidDefNodes(t *testing.T) {
 	tasks := []*task.Task{
-		{ID: "abc", Title: "First Task", Fields: map[string]string{"type": "bug", "status": "open"}},
+		{ID: "abc", Title: "First Task", Fields: map[string]string{"type": "fix", "status": "open"}},
 		{ID: "def", Title: "Second Task", Fields: map[string]string{"type": "feature", "status": "done"}},
 	}
 
 	def := buildMermaidDef(tasks, nil)
 
-	if !strings.Contains(def, `abc(["First Task`) {
-		t.Errorf("missing stadium node abc in:\n%s", def)
+	if !strings.Contains(def, "abc") || !strings.Contains(def, "<b>fix: First Task</b>") {
+		t.Errorf("missing stadium node abc with type-prefixed bold title in:\n%s", def)
 	}
 
-	if !strings.Contains(def, `def(["Second Task`) {
-		t.Errorf("missing stadium node def in:\n%s", def)
+	if !strings.Contains(def, "def") || !strings.Contains(def, "<b>feature: Second Task</b>") {
+		t.Errorf("missing stadium node def with type-prefixed bold title in:\n%s", def)
 	}
 }
 
@@ -266,43 +267,45 @@ func TestBuildMermaidDefEmpty(t *testing.T) {
 
 func TestNodeLabelWithTypeAndStatus(t *testing.T) {
 	tk := &task.Task{
+		ID:     "Abc123",
 		Title:  "My Task",
-		Fields: map[string]string{"type": "bug", "status": "open"},
+		Fields: map[string]string{"type": "fix", "status": "open"},
 	}
 
 	label := nodeLabel(tk, nil)
 
-	if !strings.Contains(label, "My Task") {
-		t.Errorf("label missing title: %s", label)
+	if !strings.Contains(label, "<b>fix: My Task</b>") {
+		t.Errorf("label missing type-prefixed bold title: %s", label)
 	}
 
-	if !strings.Contains(label, "bug") {
-		t.Errorf("label missing type: %s", label)
+	if !strings.Contains(label, "Abc123") {
+		t.Errorf("label missing task ID: %s", label)
+	}
+
+	if !strings.Contains(label, "font-size:0.7em") {
+		t.Errorf("label missing small ID styling: %s", label)
 	}
 
 	if strings.Contains(label, "open") {
-		t.Errorf("label should not contain status: %s", label)
-	}
-
-	if !strings.Contains(label, "<br/>") {
-		t.Errorf("label missing line break: %s", label)
-	}
-
-	if strings.Contains(label, "border-radius") {
-		t.Errorf("label should not contain chip markup: %s", label)
+		t.Errorf("label should not contain status text: %s", label)
 	}
 }
 
 func TestNodeLabelNoMeta(t *testing.T) {
 	tk := &task.Task{
+		ID:     "xyz",
 		Title:  "Plain Task",
 		Fields: map[string]string{},
 	}
 
 	label := nodeLabel(tk, nil)
 
-	if label != "Plain Task" {
-		t.Errorf("nodeLabel() = %q, want %q", label, "Plain Task")
+	if !strings.Contains(label, "xyz") {
+		t.Errorf("label missing ID: %s", label)
+	}
+
+	if !strings.Contains(label, "<b>Plain Task</b>") {
+		t.Errorf("label missing bold title: %s", label)
 	}
 }
 
@@ -322,14 +325,19 @@ func TestNodeLabelEmptyTitle(t *testing.T) {
 
 func TestNodeLabelPartialMeta(t *testing.T) {
 	tk := &task.Task{
+		ID:     "p1",
 		Title:  "Task",
 		Fields: map[string]string{"status": "open"},
 	}
 
 	label := nodeLabel(tk, nil)
 
-	if label != "Task" {
-		t.Errorf("nodeLabel() = %q, want %q (status should not appear in label)", label, "Task")
+	if !strings.Contains(label, "<b>Task</b>") {
+		t.Errorf("label missing bold title: %s", label)
+	}
+
+	if strings.Contains(label, "open") {
+		t.Errorf("label should not contain status text: %s", label)
 	}
 }
 
@@ -411,25 +419,28 @@ func TestBuildMermaidDefNodeStyles(t *testing.T) {
 			{Name: "open", Color: "#22c55e"},
 			{Name: "done", Color: "#6b7280"},
 		}},
+		"type": {Values: []config.Value{
+			{Name: "feature", Color: "#8b5cf6"},
+		}},
 	}
 	tasks := []*task.Task{
-		{ID: "a", Title: "Open", Fields: map[string]string{"status": "open"}},
+		{ID: "a", Title: "Open", Fields: map[string]string{"status": "open", "type": "feature"}},
 		{ID: "b", Title: "Done", Fields: map[string]string{"status": "done"}},
 		{ID: "c", Title: "None", Fields: map[string]string{}},
 	}
 
 	def := buildMermaidDef(tasks, columns)
 
-	if !strings.Contains(def, "style a fill:#22c55e") {
-		t.Errorf("missing style for node a in:\n%s", def)
+	if !strings.Contains(def, "style a fill:#22c55e,color:#fff") {
+		t.Errorf("missing fill style for node a in:\n%s", def)
 	}
 
-	if !strings.Contains(def, "style b fill:#6b7280") {
-		t.Errorf("missing style for node b in:\n%s", def)
+	if !strings.Contains(def, "style b fill:#6b7280,color:#fff") {
+		t.Errorf("missing fill style for node b in:\n%s", def)
 	}
 
 	if strings.Contains(def, "style c fill:") {
-		t.Errorf("node c without status should have no style in:\n%s", def)
+		t.Errorf("node c without status/type should have no style in:\n%s", def)
 	}
 }
 
@@ -493,5 +504,217 @@ func TestWriteLinkStylesEmpty(t *testing.T) {
 
 	if b.Len() != 0 {
 		t.Errorf("writeLinkStyles with no edges should produce empty output, got: %q", b.String())
+	}
+}
+
+func TestWriteNodeStyleBothStatusAndType(t *testing.T) {
+	columns := map[string]config.Column{
+		"status": {Values: []config.Value{{Name: "open", Color: "#22c55e"}}},
+		"type":   {Values: []config.Value{{Name: "fix", Color: "#ef4444"}}},
+	}
+	tk := &task.Task{ID: "t1", Fields: map[string]string{"status": "open", "type": "fix"}}
+
+	var b strings.Builder
+
+	writeNodeStyle(&b, tk, columns)
+	got := b.String()
+
+	want := "style t1 fill:#22c55e,color:#fff"
+	if !strings.Contains(got, want) {
+		t.Errorf("writeNodeStyle() = %q, want %q", got, want)
+	}
+}
+
+func TestWriteNodeStyleStatusOnly(t *testing.T) {
+	columns := map[string]config.Column{
+		"status": {Values: []config.Value{{Name: "open", Color: "#22c55e"}}},
+	}
+	tk := &task.Task{ID: "t1", Fields: map[string]string{"status": "open"}}
+
+	var b strings.Builder
+
+	writeNodeStyle(&b, tk, columns)
+	got := b.String()
+
+	want := "style t1 fill:#22c55e,color:#fff"
+	if !strings.Contains(got, want) {
+		t.Errorf("writeNodeStyle() = %q, want %q", got, want)
+	}
+}
+
+func TestWriteNodeStyleTypeOnly(t *testing.T) {
+	columns := map[string]config.Column{
+		"type": {Values: []config.Value{{Name: "fix", Color: "#ef4444"}}},
+	}
+	tk := &task.Task{ID: "t1", Fields: map[string]string{"type": "fix"}}
+
+	var b strings.Builder
+
+	writeNodeStyle(&b, tk, columns)
+
+	if b.Len() != 0 {
+		t.Errorf("writeNodeStyle() with type-only should produce no output, got: %q", b.String())
+	}
+}
+
+func TestWriteNodeStyleNeither(t *testing.T) {
+	tk := &task.Task{ID: "t1", Fields: map[string]string{}}
+
+	var b strings.Builder
+
+	writeNodeStyle(&b, tk, nil)
+
+	if b.Len() != 0 {
+		t.Errorf("writeNodeStyle() with no status/type should produce no output, got: %q", b.String())
+	}
+}
+
+func TestBuildTaskGraphBasic(t *testing.T) {
+	parent := &task.Task{ID: "parent1", Title: "Parent", Fields: map[string]string{}}
+	child := &task.Task{
+		ID: "child1", Title: "Child", Fields: map[string]string{},
+		Refs: []task.Ref{{Type: task.RefParent, ID: "parent1"}},
+	}
+	allTasks := map[string]*task.Task{"parent1": parent, "child1": child}
+
+	def := buildTaskGraph("child1", child, allTasks, nil, nil)
+
+	if !strings.Contains(def, "child1") {
+		t.Errorf("missing focused node child1 in:\n%s", def)
+	}
+
+	if !strings.Contains(def, "parent1") {
+		t.Errorf("missing neighbor node parent1 in:\n%s", def)
+	}
+
+	if !strings.Contains(def, "child1 --> parent1") {
+		t.Errorf("missing parent edge in:\n%s", def)
+	}
+}
+
+func TestBuildTaskGraphReverseRefs(t *testing.T) {
+	parent := &task.Task{ID: "parent1", Title: "Parent", Fields: map[string]string{}}
+	child := &task.Task{
+		ID: "child1", Title: "Child", Fields: map[string]string{},
+		Refs: []task.Ref{{Type: task.RefParent, ID: "parent1"}},
+	}
+	allTasks := map[string]*task.Task{"parent1": parent, "child1": child}
+	reverseRefs := []ReverseRef{{Label: reverseLabelChild, Source: child}}
+
+	def := buildTaskGraph("parent1", parent, allTasks, reverseRefs, nil)
+
+	if !strings.Contains(def, "child1 --> parent1") {
+		t.Errorf("missing reverse-ref edge in:\n%s", def)
+	}
+}
+
+func TestBuildTaskGraphEmpty(t *testing.T) {
+	isolated := &task.Task{ID: "alone1", Title: "Alone", Fields: map[string]string{}}
+	allTasks := map[string]*task.Task{"alone1": isolated}
+
+	def := buildTaskGraph("alone1", isolated, allTasks, nil, nil)
+
+	if def != "" {
+		t.Errorf("expected empty string for isolated task, got:\n%s", def)
+	}
+}
+
+func TestBuildTaskGraphDanglingRef(t *testing.T) {
+	tk := &task.Task{
+		ID: "t1", Title: "Task", Fields: map[string]string{},
+		Refs: []task.Ref{{Type: task.RefParent, ID: "missing"}},
+	}
+	allTasks := map[string]*task.Task{"t1": tk}
+
+	def := buildTaskGraph("t1", tk, allTasks, nil, nil)
+
+	if def != "" {
+		t.Errorf("expected empty string when all refs are dangling, got:\n%s", def)
+	}
+}
+
+func TestBuildTaskGraphFocusedHighlight(t *testing.T) {
+	parent := &task.Task{ID: "parent1", Title: "Parent", Fields: map[string]string{}}
+	child := &task.Task{
+		ID: "child1", Title: "Child", Fields: map[string]string{},
+		Refs: []task.Ref{{Type: task.RefParent, ID: "parent1"}},
+	}
+	allTasks := map[string]*task.Task{"parent1": parent, "child1": child}
+
+	def := buildTaskGraph("child1", child, allTasks, nil, nil)
+
+	if !strings.Contains(def, "subgraph _focus") {
+		t.Errorf("missing subgraph wrapper in:\n%s", def)
+	}
+
+	if !strings.Contains(def, "This Task") {
+		t.Errorf("missing subgraph title in:\n%s", def)
+	}
+
+	if strings.Contains(def, "focusedNodeStyle") {
+		t.Errorf("should not contain old focusedNodeStyle in:\n%s", def)
+	}
+}
+
+func TestBuildTaskGraphDedup(t *testing.T) {
+	a := &task.Task{
+		ID: "a1", Title: "A", Fields: map[string]string{},
+		Refs: []task.Ref{{Type: task.RefRelatesTo, ID: "b1"}},
+	}
+	b := &task.Task{
+		ID: "b1", Title: "B", Fields: map[string]string{},
+		Refs: []task.Ref{{Type: task.RefRelatesTo, ID: "a1"}},
+	}
+	allTasks := map[string]*task.Task{"a1": a, "b1": b}
+	reverseRefs := []ReverseRef{{Label: reverseLabelRelated, Source: b}}
+
+	def := buildTaskGraph("a1", a, allTasks, reverseRefs, nil)
+
+	// Count relates-to edges: should be exactly 1, not 2.
+	count := strings.Count(def, "-.->")
+	if count != 1 {
+		t.Errorf("expected 1 relates-to edge (deduplicated), got %d in:\n%s", count, def)
+	}
+}
+
+func TestForwardRefType(t *testing.T) {
+	tests := []struct {
+		label string
+		want  string
+	}{
+		{reverseLabelChild, task.RefParent},
+		{reverseLabelBlocks, task.RefBlockedBy},
+		{reverseLabelRelated, task.RefRelatesTo},
+		{"unknown", ""},
+	}
+
+	for _, tc := range tests {
+		got := forwardRefType(tc.label)
+		if got != tc.want {
+			t.Errorf("forwardRefType(%q) = %q, want %q", tc.label, got, tc.want)
+		}
+	}
+}
+
+func TestSortedNeighbors(t *testing.T) {
+	neighbors := map[string]*task.Task{
+		"c1": {ID: "c1"},
+		"a1": {ID: "a1"},
+		"b1": {ID: "b1"},
+	}
+
+	sorted := sortedNeighbors(neighbors)
+
+	if len(sorted) != 3 {
+		t.Fatalf("sortedNeighbors() length = %d, want 3", len(sorted))
+	}
+
+	if sorted[0].ID != "a1" || sorted[1].ID != "b1" || sorted[2].ID != "c1" {
+		ids := make([]string, len(sorted))
+		for i, s := range sorted {
+			ids[i] = s.ID
+		}
+
+		t.Errorf("sortedNeighbors() = %v, want [a1, b1, c1]", ids)
 	}
 }

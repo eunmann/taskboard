@@ -5,6 +5,11 @@
      hx-swap="outerHTML">
     {{range $col, $vals := .Query.Filters}}<input type="hidden" class="tb-param" name="{{$col}}" value="{{joinComma $vals}}">{{end}}
     <input type="hidden" class="tb-param" name="sort" value="{{if .Query.Desc}}-{{end}}{{.Query.Sort}}">
+    {{if and .TaskCount (ne (len .Tasks) .TaskCount)}}
+    <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        Showing {{len .Tasks}} of {{.TaskCount}} tasks
+    </div>
+    {{end}}
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         {{if .Tasks}}
         <!-- Mobile card layout -->
@@ -112,7 +117,7 @@
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-1">
                                 {{range .Tags}}
-                                <a href="/?q={{.}}" onclick="event.stopPropagation(); htmx.ajax('GET','/partials/table?q={{.}}',{target:'#task-table',swap:'outerHTML'}); var s=document.querySelector('input[name=q]'); if(s){s.value='{{.}}';} return false;"
+                                <a href="/?q={{.}}" onclick="event.stopPropagation(); applyTagSearch('{{.}}'); return false;"
                                    class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 cursor-pointer">{{.}}</a>
                                 {{end}}
                             </div>
@@ -134,7 +139,7 @@
             <p class="text-sm mt-1"><a href="/" class="text-primary-600 dark:text-primary-400 hover:underline">Clear all filters</a></p>
             {{else}}
             <p class="text-lg">No tasks found.</p>
-            <p class="text-sm mt-1">Create task files in the .tasks/ directory to get started.</p>
+            <p class="text-sm mt-1">Create task files in the .taskboard/ directory to get started.</p>
             {{end}}
         </div>
         {{end}}

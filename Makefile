@@ -12,7 +12,7 @@ VERSION ?= dev
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
 # Tools
-GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
+GOLANGCI_LINT := go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.10.1
 
 # ============================================================================
 # Help
@@ -45,12 +45,12 @@ run: build ## Build and run taskboard
 	$(BIN_DIR)/taskboard
 
 dev: ## Initialize sample data and start dev server with hot reload (air)
-	@if [ ! -f .tasks/config.yaml ]; then go run ./cmd/taskboard --init; fi
-	@if ! ls .tasks/*.yaml 2>/dev/null | grep -qv config.yaml; then $(MAKE) seed; fi
+	@if [ ! -f .taskboard/config.yaml ]; then go run ./cmd/taskboard --init; fi
+	@if ! ls .taskboard/*.yaml 2>/dev/null | grep -qv config.yaml; then $(MAKE) seed; fi
 	go run github.com/air-verse/air@v1.61.7
 
-seed: ## Create sample task files in .tasks/
-	@if [ ! -f .tasks/config.yaml ]; then go run ./cmd/taskboard --init; fi
+seed: ## Create sample task files in .taskboard/
+	@if [ ! -f .taskboard/config.yaml ]; then go run ./cmd/taskboard --init; fi
 	@go run ./cmd/seed
 
 # ============================================================================

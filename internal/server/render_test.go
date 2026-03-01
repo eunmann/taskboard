@@ -270,7 +270,7 @@ func TestSortedColumns(t *testing.T) {
 	columns := map[string]config.Column{
 		"priority": {Order: 2, Values: []config.Value{{Name: "high"}}},
 		"status":   {Order: 1, Values: []config.Value{{Name: "open"}}},
-		"type":     {Order: 3, Values: []config.Value{{Name: "bug"}}},
+		"type":     {Order: 3, Values: []config.Value{{Name: "fix"}}},
 	}
 
 	sorted := SortedColumns(columns)

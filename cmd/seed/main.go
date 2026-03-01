@@ -8,7 +8,7 @@ import (
 	"github.com/eunmann/taskboard/internal/seed"
 )
 
-const tasksDir = ".tasks"
+const tasksDir = ".taskboard"
 
 func main() {
 	if err := run(); err != nil {

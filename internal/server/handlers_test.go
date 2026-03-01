@@ -588,6 +588,7 @@ func TestDetailBackLink(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/task/abc12345", nil)
 	req.SetPathValue("id", "abc12345")
+	req.Header.Set("HX-Request", "true")
 
 	w := httptest.NewRecorder()
 
@@ -899,6 +900,182 @@ func TestDetailPageColumnBadges(t *testing.T) {
 	testhelpers.AssertElementCount(t, doc, "dl span.inline-flex", 2)
 	// Tag=backend is a clickable link.
 	testhelpers.AssertElementCount(t, doc, "dl a.inline-flex", 1)
+}
+
+func setupTestIndexWithRefs(t *testing.T) *index.Index {
+	t.Helper()
+
+	dir := t.TempDir()
+
+	writeTestFile(t, dir, "config.yaml", `
+project: Test Project
+columns:
+  status:
+    order: 1
+    values:
+      - name: open
+        color: green
+`)
+
+	writeTestFile(t, dir, "parent01.yaml", `
+title: Parent task
+status: open
+`)
+
+	writeTestFile(t, dir, "child001.yaml", `
+title: Child task
+status: open
+refs:
+  - type: parent
+    id: parent01
+`)
+
+	writeTestFile(t, dir, "blocked1.yaml", `
+title: Blocked task
+status: open
+refs:
+  - type: blocked-by
+    id: parent01
+`)
+
+	writeTestFile(t, dir, "related1.yaml", `
+title: Related task
+status: open
+refs:
+  - type: relates-to
+    id: parent01
+`)
+
+	idx, err := index.New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	return idx
+}
+
+func TestDetailReverseRefs(t *testing.T) {
+	idx := setupTestIndexWithRefs(t)
+
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	handler := handleDetail(idx, renderer)
+
+	req := httptest.NewRequest(http.MethodGet, "/task/parent01", nil)
+	req.SetPathValue("id", "parent01")
+
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	body := w.Body.String()
+
+	if !containsString(body, "Referenced by") {
+		t.Error("response missing 'Referenced by' section")
+	}
+
+	if !containsString(body, "child:") {
+		t.Error("response missing 'child:' reverse label")
+	}
+
+	if !containsString(body, "blocks:") {
+		t.Error("response missing 'blocks:' reverse label")
+	}
+
+	if !containsString(body, "related:") {
+		t.Error("response missing 'related:' reverse label")
+	}
+
+	if !containsString(body, "Child task") {
+		t.Error("response missing child task title")
+	}
+
+	if !containsString(body, "Blocked task") {
+		t.Error("response missing blocked task title")
+	}
+
+	if !containsString(body, "Related task") {
+		t.Error("response missing related task title")
+	}
+}
+
+func TestDetailNoReverseRefs(t *testing.T) {
+	idx := setupTestIndex(t)
+
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	handler := handleDetail(idx, renderer)
+
+	req := httptest.NewRequest(http.MethodGet, "/task/abc12345", nil)
+	req.SetPathValue("id", "abc12345")
+
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	body := w.Body.String()
+
+	if containsString(body, "Referenced by") {
+		t.Error("response should not contain 'Referenced by' when no reverse refs exist")
+	}
+}
+
+func TestDetailWithRefsMermaidGraph(t *testing.T) {
+	idx := setupTestIndexWithRefs(t)
+
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	handler := handleDetail(idx, renderer)
+
+	req := httptest.NewRequest(http.MethodGet, "/task/parent01", nil)
+	req.SetPathValue("id", "parent01")
+
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	testhelpers.AssertStatus(t, w, http.StatusOK)
+
+	doc := testhelpers.ParseHTML(t, w)
+
+	testhelpers.AssertElementExists(t, doc, "pre.mermaid")
+}
+
+func TestDetailWithoutRefsMermaidGraph(t *testing.T) {
+	idx := setupTestIndex(t)
+
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	handler := handleDetail(idx, renderer)
+
+	req := httptest.NewRequest(http.MethodGet, "/task/abc12345", nil)
+	req.SetPathValue("id", "abc12345")
+
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	testhelpers.AssertStatus(t, w, http.StatusOK)
+
+	doc := testhelpers.ParseHTML(t, w)
+
+	testhelpers.AssertElementCount(t, doc, "pre.mermaid", 0)
 }
 
 func containsString(s, substr string) bool {

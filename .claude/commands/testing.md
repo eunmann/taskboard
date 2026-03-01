@@ -8,8 +8,13 @@ description: Testing conventions, lint rules, make targets
 - Standard `testing` package only — **no testify**.
 - Use `if` + `t.Errorf` / `t.Fatalf` for assertions.
 - Table-driven tests with `t.Run`.
-- Compare structs with `google/go-cmp`.
 - Separate success and error test cases.
+
+## HTML Assertions
+- Use `goquery` for HTML response testing.
+- Parse response body with `goquery.NewDocumentFromReader`.
+- Assert on CSS selectors: `.Find(".class")`, `#id`, element names.
+- Check text content with `.Text()`, attributes with `.Attr("href")`.
 
 ## Test Structure
 ```go
@@ -40,12 +45,11 @@ func TestFeatureName(t *testing.T) {
 
 ## Lint Rules
 - `mnd` catches magic numbers — use named constants.
-- `funcorder` requires unexported methods after exported methods.
+- `funcorder` requires exported methods before unexported methods.
 - `funlen` max 80 lines per function.
 - `gosec G602` flags array index expressions.
 
 ## Make Targets
 - `make test` — unit tests → `artifacts/test.log`
-- `make test-all` — integration tests (requires docker) → `artifacts/test-all.log`
+- `make test-all` — all tests → `artifacts/test-all.log`
 - `make lint` — run linter → `artifacts/lint.log`
-- `make coverage` — generate coverage reports

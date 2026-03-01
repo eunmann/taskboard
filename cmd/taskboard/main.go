@@ -13,6 +13,7 @@ import (
 
 	"github.com/eunmann/taskboard/internal/config"
 	"github.com/eunmann/taskboard/internal/index"
+	"github.com/eunmann/taskboard/internal/scaffold"
 	"github.com/eunmann/taskboard/internal/server"
 )
 
@@ -24,7 +25,7 @@ var (
 )
 
 func main() {
-	dir := flag.String("dir", ".tasks", "path to tasks directory")
+	dir := flag.String("dir", ".taskboard", "path to tasks directory")
 	port := flag.Int("port", defaultPort, "HTTP server port")
 	initDir := flag.Bool("init", false, "initialize tasks directory and exit")
 	showVersion := flag.Bool("version", false, "print version and exit")
@@ -48,19 +49,58 @@ func main() {
 
 func runInit(dir string) {
 	configPath := filepath.Join(dir, config.ConfigFile)
+	configExists := false
 
 	if _, err := os.Stat(configPath); err == nil {
-		fmt.Printf("Directory already initialized: %s exists.\n", configPath)
+		configExists = true
+	}
+
+	if !configExists {
+		if err := config.WriteDefault(dir); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Initialized task directory at %s/ with default config.\n", dir)
+	}
+
+	projectDir := resolveProjectRoot(dir)
+
+	result, err := scaffold.Write(projectDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: scaffold: %v\n", err)
 
 		return
 	}
 
-	if err := config.WriteDefault(dir); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+	reportScaffold(result)
+
+	if configExists && result.CommandsWritten == 0 && !result.ClaudeMDAppended {
+		fmt.Println("Already initialized. All files present.")
+	}
+}
+
+func resolveProjectRoot(dir string) string {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "."
 	}
 
-	fmt.Printf("Initialized task directory at %s/ with default config.\n", dir)
+	return filepath.Dir(abs)
+}
+
+func reportScaffold(result *scaffold.Result) {
+	if result.CommandsWritten > 0 {
+		fmt.Printf("Wrote %d slash command(s) to .claude/commands/\n", result.CommandsWritten)
+	}
+
+	if result.CommandsSkipped > 0 {
+		fmt.Printf("Skipped %d existing command(s).\n", result.CommandsSkipped)
+	}
+
+	if result.ClaudeMDAppended {
+		fmt.Println("Appended taskboard section to CLAUDE.md.")
+	}
 }
 
 func run(dir string, port int) int {

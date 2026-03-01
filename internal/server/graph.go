@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -25,8 +26,8 @@ type LegendEntry struct {
 	Color string
 }
 
-// ForestData holds template data for the forest graph page.
-type ForestData struct {
+// GraphData holds template data for the graph page.
+type GraphData struct {
 	Title        string
 	Project      string
 	TaskCount    int
@@ -34,13 +35,13 @@ type ForestData struct {
 	StatusLegend []LegendEntry
 }
 
-func handleForest(idx *index.Index, renderer *Renderer) http.HandlerFunc {
+func handleGraph(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cfg := idx.Config()
 		allTasks := idx.List()
 
-		data := ForestData{
-			Title:        "Forest",
+		data := GraphData{
+			Title:        "Graph",
 			Project:      cfg.Project,
 			TaskCount:    len(allTasks),
 			MermaidDef:   buildMermaidDef(allTasks, cfg.Columns),
@@ -48,14 +49,14 @@ func handleForest(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 		}
 
 		if isHTMX(r) {
-			if err := renderer.RenderPartial(w, "forest", "content", data); err != nil {
+			if err := renderer.RenderPartial(w, "graph", "content", data); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 
 			return
 		}
 
-		if err := renderer.Render(w, "forest", data); err != nil {
+		if err := renderer.Render(w, "graph", data); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
@@ -67,8 +68,7 @@ func buildMermaidDef(tasks []*task.Task, columns map[string]config.Column) strin
 	b.WriteString("graph TD\n")
 
 	for _, t := range tasks {
-		label := nodeLabel(t, columns)
-		fmt.Fprintf(&b, "    %s([\"%s\"])\n", t.ID, label)
+		writeNode(&b, t.ID, nodeLabel(t, columns))
 	}
 
 	b.WriteByte('\n')
@@ -96,7 +96,7 @@ func buildMermaidDef(tasks []*task.Task, columns map[string]config.Column) strin
 	b.WriteByte('\n')
 
 	for _, t := range tasks {
-		fmt.Fprintf(&b, "    click %s \"/task/%s\"\n", t.ID, t.ID)
+		writeClickHandler(&b, t.ID)
 	}
 
 	return b.String()
@@ -105,43 +105,56 @@ func buildMermaidDef(tasks []*task.Task, columns map[string]config.Column) strin
 func nodeLabel(t *task.Task, _ map[string]config.Column) string {
 	title := sanitizeMermaid(t.Title)
 	if title == "" {
-		title = t.ID
+		return t.ID
 	}
 
-	if v := t.Fields["type"]; v != "" {
-		return title + "<br/>" + sanitizeMermaid(v)
+	if tp := t.Fields["type"]; tp != "" {
+		title = tp + ": " + title
 	}
 
-	return title
+	return "<span style='font-size:0.7em;opacity:0.55'>" + t.ID +
+		"</span><br/><b>" + title + "</b>"
+}
+
+func writeFocusedNode(b *strings.Builder, id, label string) {
+	b.WriteString("    subgraph _focus[\"This Task\"]\n")
+	b.WriteString("        " + id + "([\"" + label + "\"])\n")
+	b.WriteString("    end\n")
+}
+
+func writeNode(b *strings.Builder, id, label string) {
+	b.WriteString("    " + id + "([\"" + label + "\"])\n")
+}
+
+func writeClickHandler(b *strings.Builder, id string) {
+	b.WriteString("    click " + id + " \"/task/" + id + "\"\n")
 }
 
 func writeEdge(b *strings.Builder, sourceID string, ref task.Ref) {
 	switch ref.Type {
 	case task.RefParent:
-		fmt.Fprintf(b, "    %s --> %s\n", sourceID, ref.ID)
+		b.WriteString("    " + sourceID + " --> " + ref.ID + "\n")
 	case task.RefBlockedBy:
-		fmt.Fprintf(b, "    %s ==> %s\n", sourceID, ref.ID)
+		b.WriteString("    " + sourceID + " ==> " + ref.ID + "\n")
 	case task.RefRelatesTo:
-		fmt.Fprintf(b, "    %s -.-> %s\n", sourceID, ref.ID)
+		b.WriteString("    " + sourceID + " -.-> " + ref.ID + "\n")
 	}
 }
 
 func writeStyles(b *strings.Builder, tasks []*task.Task, columns map[string]config.Column) {
 	for _, t := range tasks {
-		status := t.Fields["status"]
-		if status == "" {
-			continue
-		}
-
-		bg := columnColor(columns, "status", status)
-		if bg == "" {
-			continue
-		}
-
-		text := contrastText(bg)
-		fmt.Fprintf(b, "    style %s fill:%s,color:%s,stroke:%s,stroke-width:2px\n",
-			t.ID, bg, text, bg)
+		writeNodeStyle(b, t, columns)
 	}
+}
+
+func writeNodeStyle(b *strings.Builder, t *task.Task, columns map[string]config.Column) {
+	fill := columnColor(columns, "status", t.Fields["status"])
+	if fill == "" {
+		return
+	}
+
+	text := contrastText(fill)
+	b.WriteString("    style " + t.ID + " fill:" + fill + ",color:" + text + "\n")
 }
 
 func buildStatusLegend(columns map[string]config.Column) []LegendEntry {
@@ -219,4 +232,156 @@ func contrastText(hexColor string) string {
 	}
 
 	return "#fff"
+}
+
+// buildTaskGraph generates a focused Mermaid graph showing the current task
+// and its 1-hop neighbors (forward refs + reverse refs). Returns "" if the
+// task has no connections.
+func buildTaskGraph(
+	taskID string,
+	t *task.Task,
+	allTasks map[string]*task.Task,
+	reverseRefs []ReverseRef,
+	columns map[string]config.Column,
+) string {
+	neighbors := make(map[string]*task.Task)
+
+	for _, ref := range t.Refs {
+		if neighbor, ok := allTasks[ref.ID]; ok {
+			neighbors[ref.ID] = neighbor
+		}
+	}
+
+	for _, rr := range reverseRefs {
+		neighbors[rr.Source.ID] = rr.Source
+	}
+
+	if len(neighbors) == 0 {
+		return ""
+	}
+
+	sorted := sortedNeighbors(neighbors)
+
+	var b strings.Builder
+
+	b.WriteString("graph TD\n")
+
+	// Write focused node first, wrapped in a labeled subgraph.
+	writeFocusedNode(&b, taskID, nodeLabel(t, columns))
+
+	for _, n := range sorted {
+		writeNode(&b, n.ID, nodeLabel(n, columns))
+	}
+
+	b.WriteByte('\n')
+
+	edgeTypes := writeTaskGraphEdges(&b, taskID, t, reverseRefs, allTasks)
+
+	b.WriteByte('\n')
+	writeLinkStyles(&b, edgeTypes)
+
+	b.WriteByte('\n')
+	writeNodeStyle(&b, t, columns)
+
+	for _, n := range sorted {
+		writeNodeStyle(&b, n, columns)
+	}
+
+	b.WriteString("    style _focus fill:none,stroke:none\n")
+
+	b.WriteByte('\n')
+	writeClickHandler(&b, taskID)
+
+	for _, n := range sorted {
+		writeClickHandler(&b, n.ID)
+	}
+
+	return b.String()
+}
+
+// writeTaskGraphEdges writes edges for forward refs and reverse refs,
+// deduplicating mutual relates-to edges. Returns edge types for link styling.
+func writeTaskGraphEdges(
+	b *strings.Builder,
+	taskID string,
+	t *task.Task,
+	reverseRefs []ReverseRef,
+	allTasks map[string]*task.Task,
+) []string {
+	type edgeKey struct{ from, to string }
+
+	seen := make(map[edgeKey]bool)
+
+	var edgeTypes []string
+
+	// Forward refs: task → target.
+	for _, ref := range t.Refs {
+		if _, ok := allTasks[ref.ID]; !ok {
+			continue
+		}
+
+		key := edgeKey{taskID, ref.ID}
+		if seen[key] {
+			continue
+		}
+
+		seen[key] = true
+
+		// For relates-to, also mark reverse direction to deduplicate.
+		if ref.Type == task.RefRelatesTo {
+			seen[edgeKey{ref.ID, taskID}] = true
+		}
+
+		writeEdge(b, taskID, ref)
+		edgeTypes = append(edgeTypes, ref.Type)
+	}
+
+	// Reverse refs: source → task (using forward ref type).
+	for _, rr := range reverseRefs {
+		fwdType := forwardRefType(rr.Label)
+		key := edgeKey{rr.Source.ID, taskID}
+
+		if seen[key] {
+			continue
+		}
+
+		seen[key] = true
+
+		if fwdType == task.RefRelatesTo {
+			seen[edgeKey{taskID, rr.Source.ID}] = true
+		}
+
+		writeEdge(b, rr.Source.ID, task.Ref{Type: fwdType, ID: taskID})
+		edgeTypes = append(edgeTypes, fwdType)
+	}
+
+	return edgeTypes
+}
+
+// forwardRefType maps a reverse label back to the forward ref type constant.
+func forwardRefType(reverseLabel string) string {
+	switch reverseLabel {
+	case reverseLabelChild:
+		return task.RefParent
+	case reverseLabelBlocks:
+		return task.RefBlockedBy
+	case reverseLabelRelated:
+		return task.RefRelatesTo
+	default:
+		return ""
+	}
+}
+
+// sortedNeighbors returns neighbor tasks in deterministic order (by ID).
+func sortedNeighbors(neighbors map[string]*task.Task) []*task.Task {
+	result := make([]*task.Task, 0, len(neighbors))
+	for _, t := range neighbors {
+		result = append(result, t)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ID < result[j].ID
+	})
+
+	return result
 }

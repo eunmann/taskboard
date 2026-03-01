@@ -35,4 +35,4 @@ go.work.sum
 /seed
 
 # Task files created during testing
-/.tasks/
+/.taskboard/

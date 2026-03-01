@@ -40,7 +40,10 @@ type DetailData struct {
 	Columns       map[string]config.Column
 	SortedColumns []ColumnInfo
 	AllTasks      map[string]*task.Task
+	ReverseRefs   []ReverseRef
 	TaskCount     int
+	MermaidDef    string
+	StatusLegend  []LegendEntry
 }
 
 func handleList(idx *index.Index, renderer *Renderer) http.HandlerFunc {
@@ -99,6 +102,8 @@ func handleDetail(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 			allTasks[tk.ID] = tk
 		}
 
+		reverseRefs := buildReverseRefs(t.ID, allTasks)
+
 		data := DetailData{
 			Title:         t.Title,
 			Project:       cfg.Project,
@@ -106,7 +111,10 @@ func handleDetail(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 			Columns:       cfg.Columns,
 			SortedColumns: SortedColumns(cfg.Columns),
 			AllTasks:      allTasks,
+			ReverseRefs:   reverseRefs,
 			TaskCount:     len(allTasks),
+			MermaidDef:    buildTaskGraph(t.ID, t, allTasks, reverseRefs, cfg.Columns),
+			StatusLegend:  buildStatusLegend(cfg.Columns),
 		}
 
 		if isHTMX(r) {
@@ -135,7 +143,8 @@ func handleTablePartial(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 			return
 		}
 
-		tasks := applySort(applyFilters(idx.List(), q), q)
+		allTasks := idx.List()
+		tasks := applySort(applyFilters(allTasks, q), q)
 
 		data := ListData{
 			Tasks:         tasks,
@@ -143,6 +152,7 @@ func handleTablePartial(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 			SortedColumns: SortedColumns(cfg.Columns),
 			Query:         q,
 			ETag:          currentETag,
+			TaskCount:     len(allTasks),
 		}
 
 		w.Header().Set("ETag", currentETag)

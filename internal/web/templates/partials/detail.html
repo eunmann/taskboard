@@ -20,6 +20,38 @@
             </div>
         </div>
         {{end}}
+
+        {{if .MermaidDef}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Relationships</h2>
+            <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
+                <div class="flex items-center gap-1.5">
+                    <svg class="w-5 h-2.5"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="1.5"/><polygon points="16,2.5 20,5 16,7.5" fill="currentColor"/></svg>
+                    <span>parent</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <svg class="w-5 h-2.5"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="3.5"/><polygon points="16,2.5 20,5 16,7.5" fill="currentColor"/></svg>
+                    <span>blocked by</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <svg class="w-5 h-2.5"><line x1="0" y1="5" x2="20" y2="5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,3"/><polygon points="16,2.5 20,5 16,7.5" fill="currentColor"/></svg>
+                    <span>relates to</span>
+                </div>
+                {{if .StatusLegend}}
+                <span class="text-gray-400 dark:text-gray-500">|</span>
+                {{range .StatusLegend}}
+                <div class="flex items-center gap-1">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:{{.Color}}"></span>
+                    <span>{{.Name}}</span>
+                </div>
+                {{end}}
+                {{end}}
+            </div>
+            <div class="overflow-x-auto">
+                <pre class="mermaid" data-def="{{.MermaidDef}}">{{.MermaidDef}}</pre>
+            </div>
+        </div>
+        {{end}}
     </div>
 
     <div class="space-y-4">

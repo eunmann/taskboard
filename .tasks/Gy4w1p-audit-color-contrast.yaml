@@ -1,0 +1,30 @@
+id: Gy4w1p
+title: "Audit color contrast across themes"
+status: open
+priority: medium
+type: chore
+tags: [ui, accessibility, design]
+created: 2025-01-16T11:30:00Z
+updated: 2025-01-16T11:30:00Z
+refs:
+  - type: parent
+    id: Nf3a5w
+  - type: relates-to
+    id: Bm9p3q
+  - type: relates-to
+    id: Qe7j2y
+description: |
+  Comprehensive contrast audit across both light and dark themes.
+
+  ## Checklist
+
+  - [ ] All text meets WCAG AA contrast ratio (4.5:1)
+  - [ ] Interactive elements meet 3:1 contrast ratio
+  - [ ] Status badges readable in both themes
+  - [ ] Priority badges readable in both themes
+  - [ ] Tag pills readable in both themes
+
+  ## Related work
+
+  Builds on the badge contrast fix and interacts with the
+  dark mode implementation — changes to either affect this audit.

@@ -243,13 +243,19 @@ func dictFunc(pairs ...any) (map[string]any, error) {
 
 	m := make(map[string]any, len(pairs)/dictPairSize)
 
-	for i := 0; i < len(pairs); i += dictPairSize {
-		key, ok := pairs[i].(string)
-		if !ok {
-			return nil, fmt.Errorf("%w: got %T", ErrDictKeyType, pairs[i])
-		}
+	var key string
 
-		m[key] = pairs[i+1]
+	for idx, p := range pairs {
+		if idx%dictPairSize == 0 {
+			var ok bool
+
+			key, ok = p.(string)
+			if !ok {
+				return nil, fmt.Errorf("%w: got %T", ErrDictKeyType, p)
+			}
+		} else {
+			m[key] = p
+		}
 	}
 
 	return m, nil

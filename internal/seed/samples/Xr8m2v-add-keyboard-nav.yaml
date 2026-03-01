@@ -1,0 +1,26 @@
+id: Xr8m2v
+title: "Add keyboard navigation shortcuts"
+status: open
+priority: high
+type: feature
+tags: [ui, accessibility]
+created: 2025-01-14T10:00:00Z
+updated: 2025-01-14T10:00:00Z
+refs:
+  - type: parent
+    id: Nf3a5w
+  - type: relates-to
+    id: Wc4g6t
+description: |
+  Add keyboard shortcuts for common task list operations.
+
+  ## Shortcuts
+
+  - `j`/`k` to move up/down in the task list
+  - `Enter` to open selected task
+  - `/` to focus search input
+  - `Escape` to clear search or go back
+
+  ## Notes
+
+  Sibling of the search task — both improve navigation UX.

@@ -192,7 +192,7 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestWriteDefaultAndLoad(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), ".tasks")
+	dir := filepath.Join(t.TempDir(), ".taskboard")
 
 	if err := WriteDefault(dir); err != nil {
 		t.Fatalf("WriteDefault() error = %v", err)

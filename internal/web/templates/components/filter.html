@@ -13,11 +13,12 @@
     <div x-show="open" x-cloak
          class="absolute left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 py-1">
         {{range .Column.Values}}
-        <label class="flex items-center px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+        <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
             <input type="checkbox" value="{{.Name}}"
                    x-model="filters['{{$.Name}}']"
                    @change="$nextTick(() => applyFilters(filters))"
-                   class="rounded border-gray-300 dark:border-gray-600 text-primary-600 mr-2">
+                   class="rounded border-gray-300 dark:border-gray-600 text-primary-600">
+            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: {{.Color}}"></span>
             <span class="text-sm text-gray-700 dark:text-gray-200">{{.Name}}</span>
         </label>
         {{end}}

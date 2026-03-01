@@ -1,4 +1,4 @@
-// Package config handles parsing and validation of .tasks/config.yaml.
+// Package config handles parsing and validation of .taskboard/config.yaml.
 package config
 
 import (
@@ -172,11 +172,12 @@ func DefaultConfig() *Config {
 			"type": {
 				Order: typeColumnOrder,
 				Values: []Value{
-					{Name: "task"},
-					{Name: "bug", Color: "#ef4444"},
 					{Name: "feature", Color: "#8b5cf6"},
-					{Name: "epic", Color: "#06b6d4"},
-					{Name: "spike", Color: "#64748b"},
+					{Name: "fix", Color: "#ef4444"},
+					{Name: "chore", Color: "#64748b"},
+					{Name: "spike", Color: "#06b6d4"},
+					{Name: "docs", Color: "#22d3ee"},
+					{Name: "refactor", Color: "#f59e0b"},
 				},
 			},
 		},

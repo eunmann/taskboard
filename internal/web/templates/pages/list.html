@@ -1,7 +1,44 @@
 {{define "content"}}
 <div class="space-y-4"
-     x-data="{ compact: localStorage.getItem('tb-density') === 'compact' }"
-     x-init="$watch('compact', v => { localStorage.setItem('tb-density', v ? 'compact' : 'comfortable') })"
+     x-data="{
+         compact: localStorage.getItem('tb-density') === 'compact',
+         search: '',
+         filters: { {{range $i, $col := .SortedColumns}}{{if $i}}, {{end}}'{{$col.Name}}': [{{range $j, $v := (index $.Query.Filters $col.Name)}}{{if $j}},{{end}}'{{$v}}'{{end}}]{{end}} },
+         colorMap: { {{range $col := .SortedColumns}}{{range .Column.Values}}'{{$col.Name}}.{{.Name}}': '{{.Color}}', {{end}}{{end}} },
+         get activeFilters() {
+             var r = [];
+             for (var c in this.filters) {
+                 for (var i = 0; i < this.filters[c].length; i++) {
+                     r.push({col: c, val: this.filters[c][i]});
+                 }
+             }
+             return r;
+         },
+         get hasActiveFilters() {
+             return this.activeFilters.length > 0 || this.search.trim().length > 0;
+         },
+         setStatusFilter(status) {
+             if (this.filters['status']) {
+                 this.filters['status'] = [status];
+                 applyFilters(this.filters);
+             }
+         },
+         removeFilter(col, val) {
+             this.filters[col] = this.filters[col].filter(function(v) { return v !== val; });
+             applyFilters(this.filters);
+         },
+         clearAll() {
+             Object.keys(this.filters).forEach(k => this.filters[k] = []);
+             this.search = '';
+             var s = document.querySelector('input[name=q]');
+             if (s) { s.value = ''; }
+             applyFilters(this.filters);
+         }
+     }"
+     x-init="
+         search = (document.querySelector('input[name=q]') || {}).value || '';
+         $watch('compact', v => { localStorage.setItem('tb-density', v ? 'compact' : 'comfortable') });
+     "
      :class="{ 'tb-compact': compact }">
     <meta name="tb-version" content="{{.ETag}}">
 
@@ -11,10 +48,12 @@
             <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <span>{{.TaskCount}} total</span>
                 {{range .StatusCounts}}
-                <span class="inline-flex items-center gap-1">
+                <button @click="setStatusFilter('{{.Name}}')"
+                        class="inline-flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-1.5 py-0.5 -my-0.5 cursor-pointer transition-colors"
+                        title="Filter by {{.Name}}">
                     <span class="w-2 h-2 rounded-full" style="background-color: {{.Color}}"></span>
                     {{.Count}} {{.Name}}
-                </span>
+                </button>
                 {{end}}
                 {{if .WarningCount}}
                 <span class="text-amber-500">&#9888; {{.WarningCount}}</span>
@@ -29,7 +68,8 @@
                    hx-trigger="input changed delay:300ms, search"
                    hx-target="#task-table"
                    hx-swap="outerHTML"
-                   hx-include="#task-table input.tb-param">
+                   hx-include="#task-table input.tb-param"
+                   @input="search = $el.value">
             <button @click="compact = !compact"
                     class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     :title="compact ? 'Comfortable view' : 'Compact view'">
@@ -40,16 +80,26 @@
     </div>
 
     {{if .SortedColumns}}
-    <div x-data="{ filters: { {{range $i, $col := .SortedColumns}}{{if $i}}, {{end}}'{{$col.Name}}': [{{range $j, $v := (index $.Query.Filters $col.Name)}}{{if $j}},{{end}}'{{$v}}'{{end}}]{{end}} } }"
-         class="flex items-center gap-2 flex-wrap">
+    <div class="flex items-center gap-2 flex-wrap">
         {{range .SortedColumns}}
         {{template "filter" dict "Name" .Name "Column" .Column}}
         {{end}}
-        <template x-if="Object.values(filters).some(a => a.length > 0)">
-            <button @click="Object.keys(filters).forEach(k => filters[k] = []); applyFilters(filters)"
+        <template x-if="hasActiveFilters">
+            <button @click="clearAll()"
                     class="ml-auto text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                Clear filters
+                Clear all
             </button>
+        </template>
+    </div>
+    <div class="flex items-center gap-1.5 flex-wrap" x-show="activeFilters.length > 0" x-cloak>
+        <template x-for="f in activeFilters" :key="f.col + '.' + f.val">
+            <span class="inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                <span class="w-2 h-2 rounded-full shrink-0" :style="'background-color: ' + (colorMap[f.col + '.' + f.val] || '#6b7280')"></span>
+                <span x-text="f.col + ': ' + f.val"></span>
+                <button @click="removeFilter(f.col, f.val)"
+                        class="ml-0.5 p-0.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        title="Remove filter">&times;</button>
+            </span>
         </template>
     </div>
     {{end}}
@@ -76,6 +126,22 @@ function applyFilters(filters) {
     var qs = params.toString();
     if (qs) { url += '?' + qs; }
     htmx.ajax('GET', url, {target:'#task-table', swap:'outerHTML'});
+}
+function applyTagSearch(tag) {
+    var params = new URLSearchParams();
+    params.set('q', tag);
+    document.querySelectorAll('#task-table input.tb-param').forEach(function(input) {
+        if (input.name === 'sort') {
+            if (input.value && input.value !== '-updated') {
+                params.set('sort', input.value);
+            }
+        } else if (input.value) {
+            params.set(input.name, input.value);
+        }
+    });
+    var s = document.querySelector('input[name=q]');
+    if (s) { s.value = tag; }
+    htmx.ajax('GET', '/partials/table?' + params.toString(), {target:'#task-table', swap:'outerHTML'});
 }
 </script>
 {{end}}

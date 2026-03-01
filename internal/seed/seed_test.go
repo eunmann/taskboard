@@ -17,8 +17,8 @@ func TestRun(t *testing.T) {
 		t.Fatalf("Run() error: %v", err)
 	}
 
-	if n != 6 {
-		t.Errorf("Run() wrote %d files, want 6", n)
+	if n != 10 {
+		t.Errorf("Run() wrote %d files, want 10", n)
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -26,8 +26,8 @@ func TestRun(t *testing.T) {
 		t.Fatalf("ReadDir() error: %v", err)
 	}
 
-	if len(entries) != 6 {
-		t.Errorf("dir has %d files, want 6", len(entries))
+	if len(entries) != 10 {
+		t.Errorf("dir has %d files, want 10", len(entries))
 	}
 }
 
@@ -46,8 +46,8 @@ func TestRunSkipsExisting(t *testing.T) {
 		t.Fatalf("Run() error: %v", err)
 	}
 
-	if n != 5 {
-		t.Errorf("Run() wrote %d files, want 5", n)
+	if n != 9 {
+		t.Errorf("Run() wrote %d files, want 9", n)
 	}
 
 	got, err := os.ReadFile(existing)
@@ -115,7 +115,7 @@ func TestSampleCount(t *testing.T) {
 		t.Fatalf("ReadDir() error: %v", err)
 	}
 
-	if len(entries) != 6 {
-		t.Errorf("embedded FS has %d samples, want 6", len(entries))
+	if len(entries) != 10 {
+		t.Errorf("embedded FS has %d samples, want 10", len(entries))
 	}
 }
