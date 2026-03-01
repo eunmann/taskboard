@@ -10,6 +10,13 @@ import (
 	"github.com/eunmann/taskboard/internal/task"
 )
 
+// StatusCount pairs a status value with its task count and color.
+type StatusCount struct {
+	Name  string
+	Count int
+	Color string
+}
+
 // ListData holds template data for the list page.
 type ListData struct {
 	Title         string
@@ -20,6 +27,9 @@ type ListData struct {
 	Query         Query
 	ETag          string
 	AllTags       []string
+	TotalCount    int
+	StatusCounts  []StatusCount
+	WarningCount  int
 }
 
 // DetailData holds template data for the detail page.
@@ -35,8 +45,9 @@ type DetailData struct {
 func handleList(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cfg := idx.Config()
+		allTasks := idx.List()
 		q := parseQuery(r, cfg.Columns)
-		tasks := applySort(applyFilters(idx.List(), q), q)
+		tasks := applySort(applyFilters(allTasks, q), q)
 		etag := computeETag(idx.Version(), q)
 
 		data := ListData{
@@ -47,7 +58,10 @@ func handleList(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 			SortedColumns: SortedColumns(cfg.Columns),
 			Query:         q,
 			ETag:          etag,
-			AllTags:       collectTags(idx.List()),
+			AllTags:       collectTags(allTasks),
+			TotalCount:    len(allTasks),
+			StatusCounts:  collectStatusCounts(allTasks, cfg.Columns),
+			WarningCount:  countWarnings(allTasks),
 		}
 
 		if isHTMX(r) {
@@ -144,6 +158,41 @@ func handleTablePartial(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
+}
+
+func collectStatusCounts(tasks []*task.Task, columns map[string]config.Column) []StatusCount {
+	col, ok := columns["status"]
+	if !ok {
+		return nil
+	}
+
+	counts := make(map[string]int)
+	for _, t := range tasks {
+		counts[t.Fields["status"]]++
+	}
+
+	result := make([]StatusCount, 0, len(col.Values))
+
+	for _, v := range col.Values {
+		c := counts[v.Name]
+		if c > 0 {
+			result = append(result, StatusCount{Name: v.Name, Count: c, Color: v.Color})
+		}
+	}
+
+	return result
+}
+
+func countWarnings(tasks []*task.Task) int {
+	n := 0
+
+	for _, t := range tasks {
+		if len(t.Warnings) > 0 {
+			n++
+		}
+	}
+
+	return n
 }
 
 func collectTags(tasks []*task.Task) []string {
