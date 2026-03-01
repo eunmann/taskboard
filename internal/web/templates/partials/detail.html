@@ -24,16 +24,11 @@
 
     <div class="space-y-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase mb-3">Details</h2>
             <dl class="space-y-3">
-                <div>
-                    <dt class="text-xs text-gray-500 dark:text-gray-400">ID</dt>
-                    <dd class="text-sm font-mono text-gray-900 dark:text-gray-100">{{.Task.ID}}</dd>
-                </div>
                 {{range .SortedColumns}}
                 <div>
-                    <dt class="text-xs text-gray-500 dark:text-gray-400">{{.Name}}</dt>
-                    <dd class="mt-0.5">
+                    <dt class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{.Name}}</dt>
+                    <dd class="mt-1">
                         {{$val := index $.Task.Fields .Name}}
                         {{if $val}}
                         {{template "badge" dict "Value" $val "Color" (.Column.ColorFor $val)}}
@@ -45,8 +40,8 @@
                 {{end}}
                 {{if .Task.Tags}}
                 <div>
-                    <dt class="text-xs text-gray-500 dark:text-gray-400">Tags</dt>
-                    <dd class="flex flex-wrap gap-1 mt-0.5">
+                    <dt class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Tags</dt>
+                    <dd class="flex flex-wrap gap-1 mt-1">
                         {{range .Task.Tags}}
                         <a href="/?q={{.}}"
                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300">{{.}}</a>
@@ -55,20 +50,28 @@
                 </div>
                 {{end}}
                 {{template "refs" .}}
-                <div>
-                    <dt class="text-xs text-gray-500 dark:text-gray-400">File</dt>
-                    <dd class="text-sm font-mono text-gray-600 dark:text-gray-300">{{.Task.FileName}}</dd>
+            </dl>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <dl class="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+                <div class="flex justify-between">
+                    <dt>ID</dt>
+                    <dd class="font-mono text-gray-700 dark:text-gray-300">{{.Task.ID}}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt>File</dt>
+                    <dd class="font-mono text-gray-700 dark:text-gray-300 truncate ml-4">{{.Task.FileName}}</dd>
                 </div>
                 {{if not .Task.Created.IsZero}}
-                <div>
-                    <dt class="text-xs text-gray-500 dark:text-gray-400">Created</dt>
-                    <dd class="text-sm text-gray-600 dark:text-gray-300" title="{{.Task.Created.Format "2006-01-02T15:04:05Z07:00"}}">{{formatTime .Task.Created}}</dd>
+                <div class="flex justify-between">
+                    <dt>Created</dt>
+                    <dd class="text-gray-700 dark:text-gray-300" title="{{.Task.Created.Format "2006-01-02T15:04:05Z07:00"}}">{{relativeTime .Task.Created}}</dd>
                 </div>
                 {{end}}
                 {{if not .Task.Updated.IsZero}}
-                <div>
-                    <dt class="text-xs text-gray-500 dark:text-gray-400">Updated</dt>
-                    <dd class="text-sm text-gray-600 dark:text-gray-300" title="{{.Task.Updated.Format "2006-01-02T15:04:05Z07:00"}}">{{relativeTime .Task.Updated}}</dd>
+                <div class="flex justify-between">
+                    <dt>Updated</dt>
+                    <dd class="text-gray-700 dark:text-gray-300" title="{{.Task.Updated.Format "2006-01-02T15:04:05Z07:00"}}">{{relativeTime .Task.Updated}}</dd>
                 </div>
                 {{end}}
             </dl>
