@@ -10,7 +10,7 @@
         <!-- Mobile card layout -->
         <div class="sm:hidden divide-y divide-gray-100 dark:divide-gray-700">
             {{range .Tasks}}
-            <a href="/task/{{.ID}}" class="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <a href="/task/{{.ID}}" class="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50{{if .Warnings}} bg-amber-50/50 dark:bg-amber-900/10{{end}}">
                 <div class="flex items-center justify-between mb-1">
                     <span class="font-medium text-gray-900 dark:text-white text-sm">{{if .Title}}{{.Title}}{{else}}{{.ID}}{{end}}</span>
                     {{if .Warnings}}<span class="text-amber-500 text-sm">&#9888;</span>{{end}}
@@ -69,7 +69,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                     {{range .Tasks}}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer{{if .Warnings}} bg-amber-50/50 dark:bg-amber-900/10{{end}}"
                         hx-get="/task/{{.ID}}"
                         hx-push-url="true"
                         hx-target="main"
