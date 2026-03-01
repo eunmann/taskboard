@@ -96,6 +96,39 @@
             }
         });
     </script>
+    <script>
+        document.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                if (e.key === 'Escape') { e.target.blur(); }
+                return;
+            }
+            if (e.key === '/') {
+                e.preventDefault();
+                var search = document.querySelector('input[name="q"]');
+                if (search) { search.focus(); }
+                return;
+            }
+            if (e.key === 'Escape') {
+                var back = document.querySelector('a[onclick*="history.back"]');
+                if (back) { history.back(); return; }
+            }
+            var rows = document.querySelectorAll('#task-table tbody tr[hx-get]');
+            if (rows.length === 0) { return; }
+            var current = document.querySelector('#task-table tbody tr.tb-selected');
+            var idx = current ? Array.from(rows).indexOf(current) : -1;
+            if (e.key === 'j') {
+                idx = Math.min(idx + 1, rows.length - 1);
+            } else if (e.key === 'k') {
+                idx = Math.max(idx - 1, 0);
+            } else if (e.key === 'Enter' && current) {
+                current.click();
+                return;
+            } else { return; }
+            if (current) { current.classList.remove('tb-selected', 'bg-primary-50', 'dark:bg-primary-900/20'); }
+            rows[idx].classList.add('tb-selected', 'bg-primary-50', 'dark:bg-primary-900/20');
+            rows[idx].scrollIntoView({block: 'nearest'});
+        });
+    </script>
 </body>
 </html>
 {{end}}
