@@ -32,8 +32,27 @@
         {{end}}
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 overflow-x-auto">
-        <pre class="mermaid" data-def="{{.MermaidDef}}">{{.MermaidDef}}</pre>
+    <div class="relative" x-data="graphZoom()">
+        <div class="absolute top-2 right-2 flex items-center gap-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm px-1 py-0.5 z-10">
+            <button @click="zoomOut()" class="px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded" title="Zoom out">&minus;</button>
+            <button @click="resetZoom()" class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded tabular-nums" x-text="Math.round(zoom * 100) + '%'" title="Reset zoom"></button>
+            <button @click="zoomIn()" class="px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded" title="Zoom in">+</button>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 overflow-auto" style="max-height:80vh">
+            <div :style="'transform: scale(' + zoom + '); transform-origin: top left;'">
+                <pre class="mermaid" data-def="{{.MermaidDef}}">{{.MermaidDef}}</pre>
+            </div>
+        </div>
     </div>
 </div>
+<script>
+function graphZoom() {
+    return {
+        zoom: 1,
+        zoomIn() { this.zoom = Math.min(2, +(this.zoom + 0.1).toFixed(1)); },
+        zoomOut() { this.zoom = Math.max(0.2, +(this.zoom - 0.1).toFixed(1)); },
+        resetZoom() { this.zoom = 1; },
+    };
+}
+</script>
 {{end}}

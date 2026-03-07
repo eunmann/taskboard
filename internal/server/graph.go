@@ -65,7 +65,7 @@ func handleGraph(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 func buildMermaidDef(tasks []*task.Task, columns map[string]config.Column) string {
 	var b strings.Builder
 
-	b.WriteString("graph TD\n")
+	b.WriteString("graph LR\n")
 
 	for _, t := range tasks {
 		writeNode(&b, t.ID, nodeLabel(t, columns))

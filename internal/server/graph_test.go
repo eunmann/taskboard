@@ -260,7 +260,7 @@ func TestBuildMermaidDefClickHandlers(t *testing.T) {
 func TestBuildMermaidDefEmpty(t *testing.T) {
 	def := buildMermaidDef(nil, nil)
 
-	if !strings.Contains(def, "graph TD") {
+	if !strings.Contains(def, "graph LR") {
 		t.Errorf("empty graph should still have header, got:\n%s", def)
 	}
 }
