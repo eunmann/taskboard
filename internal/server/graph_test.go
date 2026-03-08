@@ -718,3 +718,240 @@ func TestSortedNeighbors(t *testing.T) {
 		t.Errorf("sortedNeighbors() = %v, want [a1, b1, c1]", ids)
 	}
 }
+
+func TestFindConnectedComponents(t *testing.T) {
+	tasks := []*task.Task{
+		{ID: "a", Title: "A", Fields: map[string]string{}, Refs: []task.Ref{{Type: task.RefParent, ID: "b"}}},
+		{ID: "b", Title: "B", Fields: map[string]string{}},
+		{ID: "c", Title: "C", Fields: map[string]string{}, Refs: []task.Ref{{Type: task.RefBlockedBy, ID: "d"}}},
+		{ID: "d", Title: "D", Fields: map[string]string{}},
+		{ID: "e", Title: "E", Fields: map[string]string{}},
+	}
+
+	components := findConnectedComponents(tasks)
+
+	if len(components) != 3 {
+		t.Fatalf("findConnectedComponents() returned %d components, want 3", len(components))
+	}
+
+	// Components sorted by first ID: {a,b}, {c,d}, {e}
+	if components[0][0].ID != "a" || components[0][1].ID != "b" {
+		t.Errorf("component 0 = %v, want [a, b]", compIDs(components[0]))
+	}
+
+	if components[1][0].ID != "c" || components[1][1].ID != "d" {
+		t.Errorf("component 1 = %v, want [c, d]", compIDs(components[1]))
+	}
+
+	if len(components[2]) != 1 || components[2][0].ID != "e" {
+		t.Errorf("component 2 = %v, want [e]", compIDs(components[2]))
+	}
+}
+
+func TestFindConnectedComponentsSingleCluster(t *testing.T) {
+	tasks := []*task.Task{
+		{ID: "a", Title: "A", Fields: map[string]string{}, Refs: []task.Ref{{Type: task.RefParent, ID: "b"}}},
+		{ID: "b", Title: "B", Fields: map[string]string{}, Refs: []task.Ref{{Type: task.RefParent, ID: "c"}}},
+		{ID: "c", Title: "C", Fields: map[string]string{}},
+	}
+
+	components := findConnectedComponents(tasks)
+
+	if len(components) != 1 {
+		t.Fatalf("findConnectedComponents() returned %d components, want 1", len(components))
+	}
+
+	if len(components[0]) != 3 {
+		t.Errorf("component has %d tasks, want 3", len(components[0]))
+	}
+}
+
+func TestFindConnectedComponentsEmpty(t *testing.T) {
+	components := findConnectedComponents(nil)
+
+	if components != nil {
+		t.Errorf("findConnectedComponents(nil) = %v, want nil", components)
+	}
+}
+
+func TestFindConnectedComponentsBidirectional(t *testing.T) {
+	// A refs B but B has no ref to A — they should still be in the same component.
+	tasks := []*task.Task{
+		{ID: "a", Title: "A", Fields: map[string]string{}, Refs: []task.Ref{{Type: task.RefRelatesTo, ID: "b"}}},
+		{ID: "b", Title: "B", Fields: map[string]string{}},
+	}
+
+	components := findConnectedComponents(tasks)
+
+	if len(components) != 1 {
+		t.Fatalf("findConnectedComponents() returned %d components, want 1", len(components))
+	}
+
+	if len(components[0]) != 2 {
+		t.Errorf("component has %d tasks, want 2", len(components[0]))
+	}
+}
+
+func TestIsTerminalComponent(t *testing.T) {
+	tests := []struct {
+		name  string
+		tasks []*task.Task
+		want  bool
+	}{
+		{
+			name: "all done",
+			tasks: []*task.Task{
+				{ID: "a", Fields: map[string]string{"status": "done"}},
+				{ID: "b", Fields: map[string]string{"status": "done"}},
+			},
+			want: true,
+		},
+		{
+			name: "all cancelled",
+			tasks: []*task.Task{
+				{ID: "a", Fields: map[string]string{"status": "cancelled"}},
+			},
+			want: true,
+		},
+		{
+			name: "mix done and cancelled",
+			tasks: []*task.Task{
+				{ID: "a", Fields: map[string]string{"status": "done"}},
+				{ID: "b", Fields: map[string]string{"status": "cancelled"}},
+			},
+			want: true,
+		},
+		{
+			name: "one open among done",
+			tasks: []*task.Task{
+				{ID: "a", Fields: map[string]string{"status": "done"}},
+				{ID: "b", Fields: map[string]string{"status": "open"}},
+			},
+			want: false,
+		},
+		{
+			name: "in-progress",
+			tasks: []*task.Task{
+				{ID: "a", Fields: map[string]string{"status": "in-progress"}},
+			},
+			want: false,
+		},
+		{
+			name:  "empty component",
+			tasks: nil,
+			want:  true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := isTerminalComponent(tc.tasks)
+			if got != tc.want {
+				t.Errorf("isTerminalComponent() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestHandleGraphFiltersDoneComponents(t *testing.T) {
+	dir := t.TempDir()
+
+	writeTestFile(t, dir, "config.yaml", `
+project: Filter Test
+columns:
+  status:
+    order: 1
+    values:
+      - name: open
+        color: '#22c55e'
+      - name: done
+        color: '#6b7280'
+`)
+	writeTestFile(t, dir, "active1.yaml", "title: Active Task\nstatus: open\n")
+	writeTestFile(t, dir, "active2.yaml", "title: Active Dep\nstatus: open\nrefs:\n  - type: parent\n    id: active1\n")
+	writeTestFile(t, dir, "done1.yaml", "title: Done Task\nstatus: done\n")
+	writeTestFile(t, dir, "done2.yaml", "title: Done Dep\nstatus: done\nrefs:\n  - type: parent\n    id: done1\n")
+
+	idx, err := index.New(dir)
+	if err != nil {
+		t.Fatalf("index.New() error = %v", err)
+	}
+
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	handler := handleGraph(idx, renderer)
+
+	req := httptest.NewRequest(http.MethodGet, "/graph", nil)
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	testhelpers.AssertStatus(t, w, http.StatusOK)
+
+	body := w.Body.String()
+
+	if !strings.Contains(body, "Active Task") {
+		t.Error("response missing active cluster task")
+	}
+
+	if strings.Contains(body, "Done Task") {
+		t.Error("response should not contain done cluster task")
+	}
+
+	if !strings.Contains(body, "1 completed cluster hidden") {
+		t.Error("response missing filtered count message")
+	}
+}
+
+func TestHandleGraphAllDone(t *testing.T) {
+	dir := t.TempDir()
+
+	writeTestFile(t, dir, "config.yaml", `
+project: All Done Test
+columns:
+  status:
+    order: 1
+    values:
+      - name: done
+        color: '#6b7280'
+`)
+	writeTestFile(t, dir, "d1.yaml", "title: Done One\nstatus: done\n")
+	writeTestFile(t, dir, "d2.yaml", "title: Done Two\nstatus: done\n")
+
+	idx, err := index.New(dir)
+	if err != nil {
+		t.Fatalf("index.New() error = %v", err)
+	}
+
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	handler := handleGraph(idx, renderer)
+
+	req := httptest.NewRequest(http.MethodGet, "/graph", nil)
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	testhelpers.AssertStatus(t, w, http.StatusOK)
+
+	body := w.Body.String()
+
+	if !strings.Contains(body, "All task clusters are completed") {
+		t.Error("response missing all-done empty state message")
+	}
+}
+
+func compIDs(tasks []*task.Task) []string {
+	ids := make([]string, len(tasks))
+	for i, t := range tasks {
+		ids[i] = t.ID
+	}
+
+	return ids
+}

@@ -28,24 +28,41 @@ type LegendEntry struct {
 
 // GraphData holds template data for the graph page.
 type GraphData struct {
-	Title        string
-	Project      string
-	TaskCount    int
-	MermaidDef   string
-	StatusLegend []LegendEntry
+	Title         string
+	Project       string
+	TaskCount     int
+	MermaidDefs   []string
+	FilteredCount int
+	StatusLegend  []LegendEntry
 }
 
 func handleGraph(idx *index.Index, renderer *Renderer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cfg := idx.Config()
 		allTasks := idx.List()
+		components := findConnectedComponents(allTasks)
+
+		var defs []string
+
+		var filtered int
+
+		for _, comp := range components {
+			if isTerminalComponent(comp) {
+				filtered++
+
+				continue
+			}
+
+			defs = append(defs, buildMermaidDef(comp, cfg.Columns))
+		}
 
 		data := GraphData{
-			Title:        "Graph",
-			Project:      cfg.Project,
-			TaskCount:    len(allTasks),
-			MermaidDef:   buildMermaidDef(allTasks, cfg.Columns),
-			StatusLegend: buildStatusLegend(cfg.Columns),
+			Title:         "Graph",
+			Project:       cfg.Project,
+			TaskCount:     len(allTasks),
+			MermaidDefs:   defs,
+			FilteredCount: filtered,
+			StatusLegend:  buildStatusLegend(cfg.Columns),
 		}
 
 		if isHTMX(r) {
@@ -172,6 +189,111 @@ func buildStatusLegend(columns map[string]config.Column) []LegendEntry {
 	}
 
 	return legend
+}
+
+// findConnectedComponents groups tasks into connected subgraphs using BFS.
+// Refs are treated as undirected edges. Results are sorted by first task ID.
+func findConnectedComponents(tasks []*task.Task) [][]*task.Task {
+	if len(tasks) == 0 {
+		return nil
+	}
+
+	adj := buildAdjacency(tasks)
+	byID := make(map[string]*task.Task, len(tasks))
+
+	for _, t := range tasks {
+		byID[t.ID] = t
+	}
+
+	visited := make(map[string]bool, len(tasks))
+
+	var components [][]*task.Task
+
+	for _, t := range tasks {
+		if visited[t.ID] {
+			continue
+		}
+
+		comp := bfsComponent(t.ID, adj, visited)
+
+		members := make([]*task.Task, 0, len(comp))
+		for _, id := range comp {
+			members = append(members, byID[id])
+		}
+
+		sort.Slice(members, func(i, j int) bool {
+			return members[i].ID < members[j].ID
+		})
+
+		components = append(components, members)
+	}
+
+	sort.Slice(components, func(i, j int) bool {
+		return components[i][0].ID < components[j][0].ID
+	})
+
+	return components
+}
+
+// buildAdjacency creates a bidirectional adjacency list from task refs.
+func buildAdjacency(tasks []*task.Task) map[string][]string {
+	ids := make(map[string]bool, len(tasks))
+	for _, t := range tasks {
+		ids[t.ID] = true
+	}
+
+	adj := make(map[string][]string, len(tasks))
+
+	for _, t := range tasks {
+		for _, ref := range t.Refs {
+			if !ids[ref.ID] {
+				continue
+			}
+
+			adj[t.ID] = append(adj[t.ID], ref.ID)
+			adj[ref.ID] = append(adj[ref.ID], t.ID)
+		}
+	}
+
+	return adj
+}
+
+// bfsComponent collects all node IDs reachable from start via BFS.
+func bfsComponent(start string, adj map[string][]string, visited map[string]bool) []string {
+	queue := []string{start}
+	visited[start] = true
+
+	var result []string
+
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+
+		result = append(result, cur)
+
+		for _, neighbor := range adj[cur] {
+			if visited[neighbor] {
+				continue
+			}
+
+			visited[neighbor] = true
+			queue = append(queue, neighbor)
+		}
+	}
+
+	return result
+}
+
+// isTerminalComponent returns true if every task has status "done" or "cancelled".
+func isTerminalComponent(tasks []*task.Task) bool {
+	for _, t := range tasks {
+		s := t.Fields["status"]
+		if s != "done" && s != "cancelled" {
+			return false
+		}
+	}
+
+	return true
 }
 
 func writeLinkStyles(b *strings.Builder, edgeTypes []string) {

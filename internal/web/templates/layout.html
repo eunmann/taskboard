@@ -162,12 +162,14 @@
             }
 
             function renderMermaid() {
-                var el = document.querySelector('pre.mermaid');
-                if (!el) return;
-                var def = el.getAttribute('data-def');
-                if (!def) return;
-                el.removeAttribute('data-processed');
-                el.innerHTML = def;
+                var els = document.querySelectorAll('pre.mermaid');
+                if (els.length === 0) return;
+                els.forEach(function(el) {
+                    var def = el.getAttribute('data-def');
+                    if (!def) return;
+                    el.removeAttribute('data-processed');
+                    el.innerHTML = def;
+                });
                 mermaid.initialize({
                     startOnLoad: false,
                     theme: 'base',
@@ -181,7 +183,7 @@
             }
 
             function ensureMermaid() {
-                if (!document.querySelector('pre.mermaid')) return;
+                if (document.querySelectorAll('pre.mermaid').length === 0) return;
                 if (typeof mermaid !== 'undefined') { renderMermaid(); return; }
                 if (mermaidLoading) return;
                 mermaidLoading = true;
