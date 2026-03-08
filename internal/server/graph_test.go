@@ -947,6 +947,238 @@ columns:
 	}
 }
 
+func TestFindConnectedComponentsDanglingRef(t *testing.T) {
+	// Task A refs nonexistent "missing" — dangling ref is skipped in adjacency,
+	// so A becomes an isolated single-node component.
+	tasks := []*task.Task{
+		{ID: "a", Title: "A", Fields: map[string]string{}, Refs: []task.Ref{{Type: task.RefParent, ID: "missing"}}},
+		{ID: "b", Title: "B", Fields: map[string]string{}},
+	}
+
+	components := findConnectedComponents(tasks)
+
+	if len(components) != 2 {
+		t.Fatalf("findConnectedComponents() returned %d components, want 2", len(components))
+	}
+
+	if len(components[0]) != 1 || components[0][0].ID != "a" {
+		t.Errorf("component 0 = %v, want [a]", compIDs(components[0]))
+	}
+
+	if len(components[1]) != 1 || components[1][0].ID != "b" {
+		t.Errorf("component 1 = %v, want [b]", compIDs(components[1]))
+	}
+}
+
+func TestHandleGraphFiltersSingleDoneNode(t *testing.T) {
+	dir := t.TempDir()
+
+	writeTestFile(t, dir, "config.yaml", `
+project: Single Done Test
+columns:
+  status:
+    order: 1
+    values:
+      - name: open
+        color: '#22c55e'
+      - name: done
+        color: '#6b7280'
+`)
+	// Isolated done node — should be filtered.
+	writeTestFile(t, dir, "solo_done.yaml", "title: Solo Done\nstatus: done\n")
+	// Isolated open node — should be kept.
+	writeTestFile(t, dir, "solo_open.yaml", "title: Solo Open\nstatus: open\n")
+	// Connected active pair — should be kept.
+	writeTestFile(t, dir, "pair_a.yaml", "title: Pair A\nstatus: open\n")
+	writeTestFile(t, dir, "pair_b.yaml", "title: Pair B\nstatus: open\nrefs:\n  - type: parent\n    id: pair_a\n")
+
+	idx, err := index.New(dir)
+	if err != nil {
+		t.Fatalf("index.New() error = %v", err)
+	}
+
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	handler := handleGraph(idx, renderer)
+
+	req := httptest.NewRequest(http.MethodGet, "/graph", nil)
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	testhelpers.AssertStatus(t, w, http.StatusOK)
+
+	body := w.Body.String()
+	doc := testhelpers.ParseHTML(t, w)
+
+	// Two active components rendered (solo_open + pair).
+	testhelpers.AssertElementCount(t, doc, "pre.mermaid", 2)
+
+	if !strings.Contains(body, "Solo Open") {
+		t.Error("response missing isolated open node")
+	}
+
+	if !strings.Contains(body, "Pair A") {
+		t.Error("response missing connected active pair")
+	}
+
+	if strings.Contains(body, "Solo Done") {
+		t.Error("response should not contain isolated done node")
+	}
+
+	if !strings.Contains(body, "1 completed cluster hidden") {
+		t.Error("response missing filtered count message")
+	}
+}
+
+func TestHandleGraphKeepsMixedStatusComponent(t *testing.T) {
+	dir := t.TempDir()
+
+	writeTestFile(t, dir, "config.yaml", `
+project: Mixed Test
+columns:
+  status:
+    order: 1
+    values:
+      - name: open
+        color: '#22c55e'
+      - name: done
+        color: '#6b7280'
+`)
+	// Connected component: one open, one done — must NOT be filtered.
+	writeTestFile(t, dir, "mix_open.yaml", "title: Mix Open\nstatus: open\n")
+	writeTestFile(t, dir, "mix_done.yaml", "title: Mix Done\nstatus: done\nrefs:\n  - type: parent\n    id: mix_open\n")
+
+	idx, err := index.New(dir)
+	if err != nil {
+		t.Fatalf("index.New() error = %v", err)
+	}
+
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	handler := handleGraph(idx, renderer)
+
+	req := httptest.NewRequest(http.MethodGet, "/graph", nil)
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	testhelpers.AssertStatus(t, w, http.StatusOK)
+
+	body := w.Body.String()
+	doc := testhelpers.ParseHTML(t, w)
+
+	testhelpers.AssertElementCount(t, doc, "pre.mermaid", 1)
+
+	if !strings.Contains(body, "Mix Open") {
+		t.Error("response missing open task in mixed component")
+	}
+
+	if !strings.Contains(body, "Mix Done") {
+		t.Error("response missing done task in mixed component")
+	}
+
+	if strings.Contains(body, "completed cluster") {
+		t.Error("no clusters should be filtered in mixed component test")
+	}
+}
+
+func TestHandleGraphForest(t *testing.T) {
+	dir := t.TempDir()
+
+	writeTestFile(t, dir, "config.yaml", `
+project: Forest Test
+columns:
+  status:
+    order: 1
+    values:
+      - name: open
+        color: '#22c55e'
+      - name: done
+        color: '#6b7280'
+      - name: cancelled
+        color: '#ef4444'
+`)
+	// Isolated done node — filtered.
+	writeTestFile(t, dir, "iso_done.yaml", "title: Iso Done\nstatus: done\n")
+	// Isolated cancelled node — filtered.
+	writeTestFile(t, dir, "iso_cancel.yaml", "title: Iso Cancel\nstatus: cancelled\n")
+	// Isolated open node — kept.
+	writeTestFile(t, dir, "iso_open.yaml", "title: Iso Open\nstatus: open\n")
+	// Connected all-done cluster — filtered.
+	writeTestFile(t, dir, "clust_d1.yaml", "title: Cluster Done A\nstatus: done\n")
+	writeTestFile(t, dir, "clust_d2.yaml", "title: Cluster Done B\nstatus: done\nrefs:\n  - type: parent\n    id: clust_d1\n")
+	// Connected mixed cluster — kept.
+	writeTestFile(t, dir, "clust_m1.yaml", "title: Cluster Mix Open\nstatus: open\n")
+	writeTestFile(t, dir, "clust_m2.yaml", "title: Cluster Mix Done\nstatus: done\nrefs:\n  - type: blocked-by\n    id: clust_m1\n")
+
+	idx, err := index.New(dir)
+	if err != nil {
+		t.Fatalf("index.New() error = %v", err)
+	}
+
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatalf("NewRenderer() error = %v", err)
+	}
+
+	handler := handleGraph(idx, renderer)
+
+	req := httptest.NewRequest(http.MethodGet, "/graph", nil)
+	w := httptest.NewRecorder()
+
+	handler(w, req)
+
+	testhelpers.AssertStatus(t, w, http.StatusOK)
+
+	body := w.Body.String()
+	doc := testhelpers.ParseHTML(t, w)
+
+	// 2 active components: iso_open + mixed cluster.
+	testhelpers.AssertElementCount(t, doc, "pre.mermaid", 2)
+
+	// Active components present.
+	if !strings.Contains(body, "Iso Open") {
+		t.Error("response missing isolated open node")
+	}
+
+	if !strings.Contains(body, "Cluster Mix Open") {
+		t.Error("response missing open task in mixed cluster")
+	}
+
+	if !strings.Contains(body, "Cluster Mix Done") {
+		t.Error("response missing done task in mixed cluster (kept because partner is open)")
+	}
+
+	// Filtered components absent.
+	if strings.Contains(body, "Iso Done") {
+		t.Error("response should not contain isolated done node")
+	}
+
+	if strings.Contains(body, "Iso Cancel") {
+		t.Error("response should not contain isolated cancelled node")
+	}
+
+	if strings.Contains(body, "Cluster Done A") {
+		t.Error("response should not contain all-done cluster task A")
+	}
+
+	if strings.Contains(body, "Cluster Done B") {
+		t.Error("response should not contain all-done cluster task B")
+	}
+
+	// 3 filtered: iso_done, iso_cancel, clust_d1+d2.
+	if !strings.Contains(body, "3 completed clusters hidden") {
+		t.Error("response missing correct filtered count (expected 3)")
+	}
+}
+
 func compIDs(tasks []*task.Task) []string {
 	ids := make([]string, len(tasks))
 	for i, t := range tasks {
