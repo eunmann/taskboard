@@ -32,27 +32,57 @@
         {{end}}
     </div>
 
-    <div class="relative" x-data="graphZoom()">
+    <div class="relative">
         <div class="absolute top-2 right-2 flex items-center gap-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm px-1 py-0.5 z-10">
-            <button @click="zoomOut()" class="px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded" title="Zoom out">&minus;</button>
-            <button @click="resetZoom()" class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded tabular-nums" x-text="Math.round(zoom * 100) + '%'" title="Reset zoom"></button>
-            <button @click="zoomIn()" class="px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded" title="Zoom in">+</button>
+            <button onclick="window._graphPZ && window._graphPZ.zoomOut()" class="px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded" title="Zoom out">&minus;</button>
+            <button onclick="window._graphPZ && window._graphPZ.reset()" class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded" title="Reset zoom">Reset</button>
+            <button onclick="window._graphPZ && window._graphPZ.zoomIn()" class="px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded" title="Zoom in">+</button>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 overflow-auto" style="max-height:80vh">
-            <div :style="'transform: scale(' + zoom + '); transform-origin: top left;'">
-                <pre class="mermaid" data-def="{{.MermaidDef}}">{{.MermaidDef}}</pre>
-            </div>
+        <div id="graph-container" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700" style="height:80vh">
+            <pre class="mermaid" data-def="{{.MermaidDef}}">{{.MermaidDef}}</pre>
         </div>
     </div>
 </div>
 <script>
-function graphZoom() {
-    return {
-        zoom: 1,
-        zoomIn() { this.zoom = Math.min(2, +(this.zoom + 0.1).toFixed(1)); },
-        zoomOut() { this.zoom = Math.max(0.2, +(this.zoom - 0.1).toFixed(1)); },
-        resetZoom() { this.zoom = 1; },
-    };
-}
+(function() {
+    var spzLoading = false;
+
+    function initPanZoom() {
+        var container = document.getElementById('graph-container');
+        if (!container) return;
+        var svg = container.querySelector('svg');
+        if (!svg) return;
+        if (window._graphPZ) {
+            try { window._graphPZ.destroy(); } catch(e) {}
+            window._graphPZ = null;
+        }
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        svg.style.maxWidth = 'none';
+        window._graphPZ = svgPanZoom(svg, {
+            panEnabled: true,
+            zoomEnabled: true,
+            controlIconsEnabled: false,
+            fit: true,
+            center: true,
+            minZoom: 0.1,
+            maxZoom: 20,
+            zoomScaleSensitivity: 0.3,
+        });
+    }
+
+    function onRendered() {
+        if (!document.getElementById('graph-container')) return;
+        if (typeof svgPanZoom !== 'undefined') { initPanZoom(); return; }
+        if (spzLoading) return;
+        spzLoading = true;
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.2/dist/svg-pan-zoom.min.js';
+        s.onload = function() { spzLoading = false; initPanZoom(); };
+        document.head.appendChild(s);
+    }
+
+    document.addEventListener('mermaid:rendered', onRendered);
+})();
 </script>
 {{end}}

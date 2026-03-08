@@ -175,7 +175,9 @@
                     securityLevel: 'loose',
                     flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' },
                 });
-                mermaid.run();
+                mermaid.run().then(function() {
+                    document.dispatchEvent(new Event('mermaid:rendered'));
+                });
             }
 
             function ensureMermaid() {
